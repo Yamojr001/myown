@@ -13,6 +13,9 @@ use Inertia\Inertia;
 
 class CourseController extends Controller
 {
+    /**
+     * Display a listing of the user's courses.
+     */
     public function index()
     {
         return Inertia::render('MyCourses', [
@@ -21,6 +24,9 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created course in storage.
+     */
     public function store(StoreCourseRequest $request)
     {
         $validated = $request->validated();
@@ -50,6 +56,27 @@ class CourseController extends Controller
         return redirect(route('courses.index'))->with('message', 'Course added and analysis complete!');
     }
 
+    /**
+     * Display the specified course details.
+     */
+    public function show(Course $course)
+    {
+        // Security: Ensure the logged-in user owns this course.
+        Gate::authorize('view', $course);
+
+        // Eager load the test history for this specific course, ordered by newest first.
+        $course->load(['tests' => function ($query) {
+            $query->orderBy('created_at', 'desc');
+        }]);
+
+        return Inertia::render('Courses/Show', [
+            'course' => $course,
+        ]);
+    }
+
+    /**
+     * Show the pre-test for a specific course.
+     */
     public function showTest(Course $course)
     {
         Gate::authorize('view', $course);
@@ -74,13 +101,16 @@ class CourseController extends Controller
         ]);
     }
 
+    /**
+     * Store and grade the results of the submitted test.
+     */
     public function storeTest(Request $request, Course $course)
     {
         Gate::authorize('update', $course);
         $correctTestData = session('current_test');
         $courseTopics = session('current_test_topics');
         if (!$correctTestData || !$courseTopics) {
-            return redirect()->route('courses.index')->with('error', 'Your session expired. Please try again.');
+            return redirect()->route('courses.index')->with('error', 'Your session expired. Please try the test again.');
         }
 
         $userAnswers = $request->input('answers');
@@ -99,9 +129,12 @@ class CourseController extends Controller
             if ($userAnswerIndex !== null && (int)$userAnswerIndex === (int)$correctIndex) {
                 $correctAnswersCount++;
             } else {
-                $topicIndex = floor($index / ($totalQuestions / count($courseTopics)));
-                if (isset($courseTopics[$topicIndex])) {
-                    $weakTopics[] = $courseTopics[$topicIndex];
+                // Ensure topic mapping does not go out of bounds if topics array is small
+                if (count($courseTopics) > 0) {
+                    $topicIndex = floor($index / ($totalQuestions / count($courseTopics)));
+                    if (isset($courseTopics[$topicIndex])) {
+                        $weakTopics[] = $courseTopics[$topicIndex];
+                    }
                 }
             }
         }

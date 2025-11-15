@@ -31,6 +31,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Course Management & Testing
     Route::get('/my-courses', [CourseController::class, 'index'])->name('courses.index');
     Route::post('/my-courses', [CourseController::class, 'store'])->name('courses.store');
+    
+    // NEW: Route to view a single course's details
+    Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+    
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');
     Route::post('/courses/{course}/pre-test', [CourseController::class, 'storeTest'])->name('courses.test.store');
     Route::get('/tests/{test}/results', [TestController::class, 'showResult'])->name('tests.result.show');
@@ -41,5 +45,5 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
 });
 
-// Authentication Routes (Login, Register, etc.)
+// Authentication Routes
 require __DIR__.'/auth.php';

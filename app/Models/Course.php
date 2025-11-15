@@ -5,14 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany; // <-- IMPORT THIS CLASS
 
 class Course extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
         'user_id',
         'title',
@@ -23,11 +21,8 @@ class Course extends Model
         'progress',
     ];
 
-    /**
-     * The attributes that should be cast.
-     */
     protected $casts = [
-        'topics' => 'array', // Automatically convert the JSON 'topics' string to a PHP array!
+        'topics' => 'array',
     ];
 
     /**
@@ -37,4 +32,14 @@ class Course extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // =======================================================
+    // ADD THIS FUNCTION
+    // This defines the "one-to-many" relationship: one Course has many Tests.
+    // =======================================================
+    public function tests(): HasMany
+    {
+        return $this->hasMany(Test::class);
+    }
+    // =======================================================
 }
