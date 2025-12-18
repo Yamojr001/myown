@@ -23,6 +23,8 @@ export default {
                 'brand-orange': '#fd7e14',     // A vibrant orange accent for buttons or highlights
                 'brand-light': '#f0f2f5',     // The main light grey page background
                 'brand-white': '#ffffff',     // Pure white for cards and modals
+                'brand-blue': '#144E8A', // A slightly deeper blue for gradients
+                'brand-orange': '#ff6b35',
                 'brand-text': '#1d2d3e',      // The primary text color, almost black
                 'brand-secondary': '#6c757d',  // Secondary text color for subtitles
             },

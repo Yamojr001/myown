@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SuggestionController;
+use App\Http\Controllers\MasterTimetableController; // <-- IMPORT
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -31,13 +33,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Course Management & Testing
     Route::get('/my-courses', [CourseController::class, 'index'])->name('courses.index');
     Route::post('/my-courses', [CourseController::class, 'store'])->name('courses.store');
-    
-    // NEW: Route to view a single course's details
     Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
-    
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');
     Route::post('/courses/{course}/pre-test', [CourseController::class, 'storeTest'])->name('courses.test.store');
     Route::get('/tests/{test}/results', [TestController::class, 'showResult'])->name('tests.result.show');
+
+    // AI Suggestion Routes
+    Route::get('/courses/{course}/suggestion', [SuggestionController::class, 'show'])->name('suggestion.show');
+    Route::post('/courses/{course}/suggestion', [SuggestionController::class, 'generate'])->name('suggestion.generate');
+    Route::get('/suggestion/{suggestion}/download', [SuggestionController::class, 'download'])->name('suggestion.download');
+
+    // Master Timetable Routes
+    Route::get('/master-timetable', [MasterTimetableController::class, 'show'])->name('master-timetable.show');
+    Route::post('/master-timetable', [MasterTimetableController::class, 'generate'])->name('master-timetable.generate');
 });
 
 // Admin-Only Routes

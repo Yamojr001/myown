@@ -36,7 +36,8 @@ export default function Authenticated({ user, children }) {
                         <span className="hidden sm:inline font-semibold text-sm text-brand-text">{user.name}</span>
                          <img
                             className="h-9 w-9 rounded-full object-cover ml-3"
-                            src={`https://i.pravatar.cc/150?u=${user.id}`}
+                            // src={`https://i.pravatar.cc/150?u=${user.id}`}
+                            src={'https://www.pngall.com/wp-content/uploads/2016/06/Demon-PNG-Pic.png'}
                             alt="User Avatar"
                         />
                     </div>

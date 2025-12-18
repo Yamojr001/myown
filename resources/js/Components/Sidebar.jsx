@@ -42,7 +42,10 @@ export default function Sidebar({ user, showing }) {
                         <i className="fas fa-book-open w-6 mr-3 text-center"></i>
                         My Courses
                     </SidebarLink>
-                    
+                     <SidebarLink href={route('master-timetable.show')} active={isActive('master-timetable.show')}>
+                        <i className="fas fa-calendar-alt w-6 mr-3 text-center"></i>
+                        Master Timetable
+                    </SidebarLink>
                     {/* Divider */}
                     <div className="pt-4 pb-2">
                         <hr className="border-gray-700" />

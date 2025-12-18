@@ -89,9 +89,9 @@ export default function Show({ auth, course }) {
                              <div className="bg-brand-white rounded-xl shadow-lg p-6 text-center">
                                 <h3 className="text-xl font-bold text-brand-text mb-4">Next Step</h3>
                                 <p className="text-brand-secondary mb-4">Generate your personalized study plan based on your test results.</p>
-                                <button className="w-full px-6 py-3 bg-brand-blue text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105">
-                                    <i className="fas fa-calendar-alt mr-2"></i> View Timetable
-                                </button>
+                                <Link href={route('suggestion.show', course.id)} className="block w-full text-center px-6 py-3 bg-brand-orange text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105">
+                                    <i className="fas fa-magic mr-2"></i> Generate AI Study Guide
+                                </Link>
                              </div>
 
                              <div className="bg-brand-white rounded-xl shadow-lg">
