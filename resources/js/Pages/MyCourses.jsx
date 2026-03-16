@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
@@ -6,15 +6,104 @@ import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 import InputError from '@/Components/InputError';
 import PrimaryButton from '@/Components/PrimaryButton';
+import axios from 'axios';
 
 export default function MyCourses({ auth, courses, flash }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [fileStatuses, setFileStatuses] = useState([]); // Array of { file, status, error, text }
+    const fileInputRef = useRef(null);
+
     const { data, setData, post, processing, errors, reset } = useForm({
-        title: '', code: '', syllabus: null,
+        title: '', code: '', syllabus_text: '',
     });
+
     const openModal = () => setIsModalOpen(true);
-    const closeModal = () => { setIsModalOpen(false); reset(); };
-    const submit = (e) => { e.preventDefault(); post(route('courses.store'), { onSuccess: () => closeModal() }); };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setFileStatuses([]);
+        reset();
+    };
+
+    const handleFileChange = async (e) => {
+        const newFiles = Array.from(e.target.files);
+        if (newFiles.length === 0) return;
+
+        // Enforce max 5 total files
+        const currentCount = fileStatuses.length;
+        const allowedNewCount = Math.max(0, 5 - currentCount);
+        const filesToProcess = newFiles.slice(0, allowedNewCount);
+
+        if (newFiles.length > allowedNewCount) {
+            alert('You can only upload a maximum of 5 files per course.');
+        }
+
+        const newStatuses = filesToProcess.map(file => ({
+            id: Math.random().toString(36).substr(2, 9),
+            name: file.name,
+            file: file,
+            status: 'extracting', // 'extracting', 'success', 'error'
+            error: null,
+            text: ''
+        }));
+
+        setFileStatuses(prev => [...prev, ...newStatuses]);
+
+        // Process each file
+        for (const statusObj of newStatuses) {
+            const formData = new FormData();
+            formData.append('file', statusObj.file);
+
+            try {
+                const response = await axios.post(route('courses.extract-text'), formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+
+                if (response.data.success) {
+                    setFileStatuses(prev => prev.map(item =>
+                        item.id === statusObj.id
+                            ? { ...item, status: 'success', text: response.data.text }
+                            : item
+                    ));
+                } else {
+                    throw new Error(response.data.message || 'Extraction failed');
+                }
+            } catch (err) {
+                console.error("File extraction error:", err);
+                setFileStatuses(prev => prev.map(item =>
+                    item.id === statusObj.id
+                        ? { ...item, status: 'error', error: err.response?.data?.message || err.message }
+                        : item
+                ));
+            }
+        }
+    };
+
+    const removeFile = (id) => {
+        setFileStatuses(prev => prev.filter(item => item.id !== id));
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const isAllExtracted = fileStatuses.length > 0 && fileStatuses.every(f => f.status === 'success');
+    const isExtracting = fileStatuses.some(f => f.status === 'extracting');
+
+    const submit = (e) => {
+        e.preventDefault();
+
+        if (!isAllExtracted) return;
+
+        // Combine all extracted text
+        const combinedText = fileStatuses.map(f => f.text).join("\n\n---\n\n");
+        setData('syllabus_text', combinedText);
+
+        // Use a slight timeout to ensure state update propagated before post
+        setTimeout(() => {
+            post(route('courses.store'), {
+                data: { ...data, syllabus_text: combinedText }, // Explicitly pass the updated data to be safe
+                onSuccess: () => closeModal()
+            });
+        }, 100);
+    };
 
     const renderCourseAction = (course) => {
         switch (course.status) {
@@ -63,12 +152,78 @@ export default function MyCourses({ auth, courses, flash }) {
             </div>
             <Modal show={isModalOpen} onClose={closeModal}>
                 <form onSubmit={submit} className="p-6">
-                    <h2 className="text-lg font-medium text-brand-text">Add a New Course</h2>
-                    <p className="mt-1 text-sm text-brand-secondary">Upload your syllabus to let our AI begin its analysis.</p>
-                    <div className="mt-6"><InputLabel htmlFor="title" value="Course Title" /><TextInput id="title" name="title" value={data.title} className="mt-1 block w-full" onChange={(e) => setData('title', e.target.value)} required /><InputError message={errors.title} className="mt-2" /></div>
-                    <div className="mt-4"><InputLabel htmlFor="code" value="Course Code" /><TextInput id="code" name="code" value={data.code} className="mt-1 block w-full" onChange={(e) => setData('code', e.target.value)} required /><InputError message={errors.code} className="mt-2" /></div>
-                    <div className="mt-4"><InputLabel htmlFor="syllabus" value="Syllabus File (PDF only, max 15MB)" /><input type="file" name="syllabus" id="syllabus" className="mt-1 block w-full text-sm text-brand-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20" onChange={(e) => setData('syllabus', e.target.files[0])} accept=".pdf" required /><InputError message={errors.syllabus} className="mt-2" /></div>
-                    <div className="mt-6 flex justify-end"><button type="button" onClick={closeModal} className="text-brand-secondary mr-4">Cancel</button><PrimaryButton disabled={processing}>{processing ? 'Saving...' : 'Save Course'}</PrimaryButton></div>
+                    <h2 className="text-xl font-bold text-brand-text">Add a New Course</h2>
+                    <p className="mt-1 text-sm text-brand-secondary mb-6">Upload up to 5 syllabi, PDFs, PowerPoint slides, or images. We'll automatically extract the text to determine your course topics.</p>
+
+                    <div className="mt-4">
+                        <InputLabel htmlFor="title" value="Course Title" />
+                        <TextInput id="title" name="title" value={data.title} className="mt-1 block w-full" onChange={(e) => setData('title', e.target.value)} required />
+                        <InputError message={errors.title} className="mt-2" />
+                    </div>
+
+                    <div className="mt-4">
+                        <InputLabel htmlFor="code" value="Course Code" />
+                        <TextInput id="code" name="code" value={data.code} className="mt-1 block w-full" onChange={(e) => setData('code', e.target.value)} required />
+                        <InputError message={errors.code} className="mt-2" />
+                    </div>
+
+                    <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                        <InputLabel htmlFor="files" value="Course Files & Materials (Max 5)" className="font-bold text-gray-700" />
+
+                        <input
+                            type="file"
+                            name="files"
+                            id="files"
+                            ref={fileInputRef}
+                            multiple
+                            accept=".pdf, .png, .jpg, .jpeg, .txt, .ppt, .pptx"
+                            className="mt-2 block w-full text-sm text-brand-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20 cursor-pointer"
+                            onChange={handleFileChange}
+                            disabled={fileStatuses.length >= 5 || isExtracting}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">Supported: PDF, PNG, JPG, TXT, PPTX (Max 15MB each)</p>
+
+                        {/* File Status List */}
+                        {fileStatuses.length > 0 && (
+                            <div className="mt-4 space-y-2">
+                                {fileStatuses.map((file) => (
+                                    <div key={file.id} className="flex items-center justify-between p-3 bg-white border rounded shadow-sm text-sm">
+                                        <div className="flex items-center space-x-3 w-3/4">
+                                            <i className="fas fa-file-alt text-gray-400"></i>
+                                            <span className="truncate flex-1 font-medium text-gray-700">{file.name}</span>
+                                        </div>
+
+                                        <div className="flex items-center space-x-3">
+                                            {file.status === 'extracting' && <span className="text-blue-500 text-xs font-bold animate-pulse"><i className="fas fa-spinner fa-spin mr-1"></i> Extracting...</span>}
+                                            {file.status === 'success' && <span className="text-green-500 text-xs font-bold"><i className="fas fa-check-circle mr-1"></i> Ready</span>}
+                                            {file.status === 'error' && <span className="text-red-500 text-xs font-bold" title={file.error}><i className="fas fa-exclamation-circle mr-1"></i> Failed</span>}
+
+                                            <button type="button" onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <InputError message={errors.syllabus_text} className="mt-2" />
+                    </div>
+
+                    <div className="mt-8 flex justify-end items-center">
+                        <button type="button" onClick={closeModal} className="text-gray-500 hover:text-gray-700 font-medium mr-4">Cancel</button>
+                        <PrimaryButton
+                            disabled={processing || isExtracting || !isAllExtracted}
+                            className={(!isAllExtracted || isExtracting) ? 'opacity-50 cursor-not-allowed' : 'bg-brand-blue'}
+                        >
+                            {processing ? (
+                                <><i className="fas fa-spinner fa-spin mr-2"></i> Generating Topics...</>
+                            ) : isExtracting ? (
+                                <><i className="fas fa-spinner fa-spin mr-2"></i> Extracting Text...</>
+                            ) : (
+                                <><i className="fas fa-save mr-2"></i> Save & Analyze Course</>
+                            )}
+                        </PrimaryButton>
+                    </div>
                 </form>
             </Modal>
         </AuthenticatedLayout>

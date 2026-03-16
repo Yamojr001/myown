@@ -26,7 +26,20 @@ class AiService {
             $text = preg_replace('/\s+/', ' ', $pdf->getText());
             if (empty($text)) return null;
             
-            $prompt = "Analyze the following text from a university course syllabus. Your task is to identify and extract the main learning topics or key subject modules. Return your response as a single, flat JSON array of strings. For example: [\"Topic A\", \"Topic B\", \"Advanced Topic C\"]. Do not add any introductory text, explanation, or markdown formatting like ```json. Your response must be ONLY the JSON array itself. Here is the syllabus text: " . $text;
+            return $this->extractTopicsFromText($text);
+        } catch (\Exception $e) {
+            \Log::error('AI Service PDF Parsing Failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function extractTopicsFromText($text) {
+        try {
+            if (empty($text)) return null;
+            
+            // Limit text size to something gemini handles easily in terms of prompt length (e.g., 200,000 chars)
+            $promptText = substr($text, 0, 200000);
+            $prompt = "Analyze the following extracted text from a university course syllabus or material. Your task is to identify and extract the main learning topics or key subject modules. Return your response as a single, flat JSON array of strings. For example: [\"Topic A\", \"Topic B\", \"Advanced Topic C\"]. Do not add any introductory text, explanation, or markdown formatting like ```json. Your response must be ONLY the JSON array itself. Here is the syllabus text: " . $promptText;
 
             $responseContent = $this->callGemini($prompt);
             if ($responseContent === null) return null;
@@ -34,8 +47,51 @@ class AiService {
             $topics = json_decode($responseContent, true);
             return (json_last_error() === JSON_ERROR_NONE && is_array($topics)) ? $topics : null;
         } catch (\Exception $e) {
-            \Log::error('AI Service PDF Extraction Failed: ' . $e->getMessage());
+            \Log::error('AI Service Text Topic Extraction Failed: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    public function extractTextFromImage(string $filePath, string $mimeType) {
+        try {
+            if (!file_exists($filePath)) return "";
+            
+            $base64Data = base64_encode(file_get_contents($filePath));
+            $prompt = "Analyze this document or image and extract ALL readable text. Maintain paragraphs and formatting where possible. Return ONLY the raw extracted text without any surrounding quotes, tags, or markdown blocks.";
+            
+            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $this->apiKey;
+
+            $response = $this->client->post($apiUrl, [
+                'headers' => ['Content-Type'  => 'application/json'],
+                'json' => [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt],
+                                ['inline_data' => [
+                                    'mime_type' => $mimeType,
+                                    'data' => $base64Data
+                                ]]
+                            ]
+                        ]
+                    ],
+                    'generationConfig' => [
+                        'temperature' => 0.1,
+                    ]
+                ],
+                'timeout' => 60,
+            ]);
+
+            $body = json_decode($response->getBody()->getContents(), true);
+            
+            if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+                return $body['candidates'][0]['content']['parts'][0]['text'];
+            }
+            
+            return "";
+        } catch (\Exception $e) {
+            \Log::error('AI Service Image/PDF Text Extraction Failed: ' . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -265,28 +321,15 @@ class AiService {
             3. Include focused review weeks before each test.
             4. Test weeks should have reduced study load or focus on review only.
             5. Distribute content evenly with realistic weekly study hours.
-            6. Return JSON with this structure:
-               {
-                 \"week_1\": {
-                   \"courses\": [
-                     {
-                       \"course\": \"Course Name\",
-                       \"topics\": [\"Topic 1\", \"Topic 2\"],
-                       \"pages_to_read\": \"X-Y\",
-                       \"tasks\": [\"Read chapter\", \"Practice exercises\"],
-                       \"estimated_hours\": X
-                     }
-                   ],
-                   \"weekly_objectives\": [\"Objective 1\", \"Objective 2\"],
-                   \"total_study_hours\": X,
-                   \"is_test_week\": false,
-                   \"test_prep\": \"None\"
-                 }
-               }
-            7. Weekly study hours: {$preferences['study_hours']} hours.
-            8. For test weeks, reduce study hours by 50% and focus on review.
-            9. The week before a test should be focused on review and practice.
-            10. Constraints: {$constraints}";
+            6. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above. Do not skip any courses in any week, even if the estimated hours are low.
+            7. CRITICAL: To prevent token limits, you MUST return MINIFIED JSON. Do NOT use any line breaks, indentation, or unnecessary whitespace.
+            8. CRITICAL: Keep all `topics` and `tasks` string arrays extremely concise. Summarize them in under 8 words per item, max 2 items. You MUST complete all {$semesterWeeks} weeks before stopping.
+            9. Return JSON strictly matching this structure:
+               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"topics\":[\"Topic 1\",\"Topic 2\"],\"pages_to_read\":\"10-20\",\"tasks\":[\"Read chapter\",\"Practice exercises\"],\"estimated_hours\":2},{\"course\":\"Second Course Name\",\"topics\":[\"Topic A\"],\"pages_to_read\":\"20-30\",\"tasks\":[\"Review lectures\"],\"estimated_hours\":3}],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false,\"test_prep\":\"None\"}}
+            10. Weekly study hours: {$preferences['study_hours']} hours.
+            11. For test weeks, reduce study hours by 50% and focus on review.
+            12. The week before a test should be focused on review and practice.
+            13. Constraints: {$constraints}";
 
             $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 60));
             
@@ -300,7 +343,7 @@ class AiService {
             if (json_last_error() !== JSON_ERROR_NONE) {
                 \Log::error('AI Service Semester Schedule: JSON decode error', [
                     'error' => json_last_error_msg(),
-                    'response' => substr($responseContent, 0, 200)
+                    'response' => substr($responseContent, 0, 4000) . '... (truncated, total length: ' . strlen($responseContent) . ')'
                 ]);
                 return null;
             }
@@ -664,6 +707,14 @@ class AiService {
             $cleaned = substr($cleaned, 1, -1);
             $cleaned = str_replace('\"', '"', $cleaned);
         }
+
+        // Replace all literal newlines, carriage returns, and tabs with spaces.
+        // This safely flattens the JSON string into one line, completely removing any 
+        // unescaped control characters Gemini injects inside string values that cause json_decode to fail.
+        $cleaned = str_replace(["\n", "\r", "\t"], ' ', $cleaned);
+        
+        // Strip any remaining invisible control characters
+        $cleaned = preg_replace('/[\x00-\x1F\x7F]/', '', $cleaned);
         
         return $cleaned;
     }

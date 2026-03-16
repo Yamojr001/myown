@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Course Management & Testing
     Route::get('/my-courses', [CourseController::class, 'index'])->name('courses.index');
+    Route::post('/courses/extract-text', [CourseController::class, 'extractText'])->name('courses.extract-text');
     Route::post('/my-courses', [CourseController::class, 'store'])->name('courses.store');
     Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');

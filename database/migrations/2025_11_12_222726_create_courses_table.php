@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('title');
             $table->string('code');
-            $table->string('file_path');
+            $table->string('file_path')->nullable();
             $table->text('topics')->nullable();
             $table->string('status')->default('Syllabus Uploaded');
             $table->integer('progress')->default(0);

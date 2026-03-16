@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Smalot\PdfParser\Parser;
 
 class CourseController extends Controller
 {
@@ -27,22 +28,24 @@ class CourseController extends Controller
     /**
      * Store a newly created course in storage.
      */
-    public function store(StoreCourseRequest $request)
+    public function store(Request $request)
     {
-        $validated = $request->validated();
-        $path = $request->file('syllabus')->store('syllabi', 'public');
-        $fullPath = storage_path('app/public/' . $path);
-
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'code' => 'required|string|max:50',
+            'syllabus_text' => 'required|string',
+        ]);
+        
         $course = Auth::user()->courses()->create([
             'title' => $validated['title'],
             'code' => $validated['code'],
-            'file_path' => $path,
+            'file_path' => null, // Files are not stored permanently for now, just text
             'status' => 'Analyzing Syllabus...',
         ]);
 
         try {
-            $aiService = new AiService(config('services.gemini.api_key'));
-            $topics = $aiService->extractTopicsFromPdf($fullPath);
+            $aiService = new AiService();
+            $topics = $aiService->extractTopicsFromText($validated['syllabus_text']);
 
             if ($topics) {
                 $course->update(['topics' => $topics, 'status' => 'Pre-Test Needed']);
@@ -54,6 +57,69 @@ class CourseController extends Controller
             \Log::error('AI Service Exception in store(): ' . $e->getMessage());
         }
         return redirect(route('courses.index'))->with('message', 'Course added and analysis complete!');
+    }
+
+    /**
+     * Extract text from various file formats.
+     */
+    public function extractText(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:15360', // 15MB
+        ]);
+
+        $file = $request->file('file');
+        $mimeType = $file->getMimeType();
+        $extension = strtolower($file->getClientOriginalExtension());
+        $extractedText = '';
+        
+        try {
+            if ($extension === 'txt' || $mimeType === 'text/plain') {
+                $extractedText = file_get_contents($file->getRealPath());
+            } elseif (in_array($extension, ['png', 'jpg', 'jpeg'])) {
+                $aiService = new AiService();
+                $extractedText = $aiService->extractTextFromImage($file->getRealPath(), $mimeType);
+            } elseif ($extension === 'pdf') {
+                $parser = new Parser();
+                $pdf = $parser->parseFile($file->getRealPath());
+                $extractedText = $pdf->getText();
+                
+                // If PDF is mostly images, text will be very short. Use Gemini Vision as fallback.
+                if (strlen(trim($extractedText)) < 100) {
+                    $aiService = new AiService();
+                    $extractedText = $aiService->extractTextFromImage($file->getRealPath(), 'application/pdf');
+                }
+            } elseif (in_array($extension, ['ppt', 'pptx'])) {
+                if ($extension === 'pptx') {
+                    $zip = new \ZipArchive;
+                    if ($zip->open($file->getRealPath()) === true) {
+                        for ($i = 0; $i < $zip->numFiles; $i++) {
+                            $entry = $zip->getNameIndex($i);
+                            if (strpos($entry, 'ppt/slides/slide') !== false && strpos($entry, '.xml') !== false) {
+                                $slideXml = $zip->getFromName($entry);
+                                $extractedText .= strip_tags($slideXml) . " ";
+                            }
+                        }
+                        $zip->close();
+                    }
+                } else {
+                    throw new \Exception("Legacy .ppt files are not supported. Please convert to .pptx or PDF.");
+                }
+            } else {
+                throw new \Exception("Unsupported file type: {$extension}. Supported: pdf, png, jpg, txt, pptx.");
+            }
+            
+            return response()->json([
+                'success' => true,
+                'text' => trim($extractedText)
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Extraction failed: " . $e->getMessage());
+             return response()->json([
+                'success' => false,
+                'message' => 'Failed to extract text: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

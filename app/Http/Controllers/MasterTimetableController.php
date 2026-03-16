@@ -103,27 +103,28 @@ class MasterTimetableController extends Controller
 
         foreach ($courses as $course) {
             $latestTest = $course->tests()->latest()->first();
-            if ($latestTest) {
-                $pageCount = 0;
-                try {
+            
+            $pageCount = 0;
+            try {
+                if ($course->file_path) {
                     $filePath = storage_path('app/public/' . $course->file_path);
                     if (file_exists($filePath)) {
                         $pdf = $parser->parseFile($filePath);
                         $pageCount = count($pdf->getPages());
                     }
-                } catch (\Exception $e) { }
+                }
+            } catch (\Exception $e) { }
 
-                $coursesForAI[] = [
-                    'title' => $course->title,
-                    'score' => $latestTest->score,
-                    'page_count' => $pageCount,
-                    'weak_topics' => $latestTest->weak_topics,
-                ];
-            }
+            $coursesForAI[] = [
+                'title' => $course->title,
+                'score' => $latestTest ? $latestTest->score : 50,
+                'page_count' => $pageCount > 0 ? $pageCount : 100, // Fallback priority if no physical PDF exists
+                'weak_topics' => $latestTest && $latestTest->weak_topics ? $latestTest->weak_topics : [],
+            ];
         }
 
         if (empty($coursesForAI)) {
-            return back()->with('error', 'No courses with test results were found to generate a timetable.');
+            return back()->with('error', 'Please add at least one course to generate a timetable.');
         }
 
         // Calculate test schedule based on semester weeks
