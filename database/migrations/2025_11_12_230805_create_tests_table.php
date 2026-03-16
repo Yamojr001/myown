@@ -12,9 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('course_id')->constrained()->onDelete('cascade');
-            $table->enum('type', ['Pre-Test', 'Mid-Term', 'Final-Exam']);
-            $table->integer('score'); // Store as a percentage, e.g., 85
-            $table->json('weak_topics')->nullable(); // Store an array of topics the user failed
+            $table->enum('type', ['Pre-Test', 'mid_semester', 'post_test', 'mock_exam'])->default('Pre-Test');
+            $table->integer('score');
+            $table->json('weak_topics')->nullable();
+            $table->date('taken_date')->nullable();
             $table->timestamps();
         });
     }

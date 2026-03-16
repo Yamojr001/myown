@@ -9,9 +9,8 @@ function SidebarLink({ href, active, children }) {
     return (
         <Link
             href={href}
-            className={`flex items-center w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors duration-200 ${
-                active ? activeClasses : inactiveClasses
-            }`}
+            className={`flex items-center w-full px-4 py-3 text-sm font-semibold rounded-lg transition-colors duration-200 ${active ? activeClasses : inactiveClasses
+                }`}
         >
             {children}
         </Link>
@@ -42,9 +41,21 @@ export default function Sidebar({ user, showing }) {
                         <i className="fas fa-book-open w-6 mr-3 text-center"></i>
                         My Courses
                     </SidebarLink>
-                     <SidebarLink href={route('master-timetable.show')} active={isActive('master-timetable.show')}>
+                    <SidebarLink href={route('master-timetable.show')} active={isActive('master-timetable.show')}>
                         <i className="fas fa-calendar-alt w-6 mr-3 text-center"></i>
                         Master Timetable
+                    </SidebarLink>
+                    <SidebarLink href={route('reading-plan.index')} active={isActive('reading-plan.index')}>
+                        <i className="fas fa-book-reader w-6 mr-3 text-center"></i>
+                        Reading Plan
+                    </SidebarLink>
+                    <SidebarLink href={route('tutor.show')} active={isActive('tutor.show')}>
+                        <i className="fas fa-chalkboard-teacher w-6 mr-3 text-center"></i>
+                        AI Tutor
+                    </SidebarLink>
+                    <SidebarLink href={route('read-aloud.show')} active={isActive('read-aloud.show')}>
+                        <i className="fas fa-volume-up w-6 mr-3 text-center"></i>
+                        Read Aloud
                     </SidebarLink>
                     {/* Divider */}
                     <div className="pt-4 pb-2">
@@ -59,10 +70,10 @@ export default function Sidebar({ user, showing }) {
                         <i className="fas fa-cog w-6 mr-3 text-center"></i>
                         Settings
                     </SidebarLink>
-                    
+
                     {/* Admin Link - only shows if user.is_admin is true */}
                     {user.is_admin && (
-                         <SidebarLink href={route('admin.dashboard')} active={isActive('admin.dashboard')}>
+                        <SidebarLink href={route('admin.dashboard')} active={isActive('admin.dashboard')}>
                             <i className="fas fa-user-shield w-6 mr-3 text-center text-brand-orange"></i>
                             Admin Panel
                         </SidebarLink>
@@ -71,9 +82,9 @@ export default function Sidebar({ user, showing }) {
 
                 {/* Logout Button */}
                 <div className="mt-6">
-                    <Link 
-                        method="post" 
-                        href={route('logout')} 
+                    <Link
+                        method="post"
+                        href={route('logout')}
                         as="button"
                         className="w-full text-left text-gray-400 hover:bg-red-500/20 hover:text-white flex items-center px-4 py-3 text-sm font-semibold rounded-lg transition-colors duration-200"
                     >

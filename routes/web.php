@@ -5,7 +5,8 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SuggestionController;
-use App\Http\Controllers\MasterTimetableController; // <-- IMPORT
+use App\Http\Controllers\MasterTimetableController;
+use App\Http\Controllers\ReadingPlanController; // <-- IMPORT
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -46,6 +47,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Master Timetable Routes
     Route::get('/master-timetable', [MasterTimetableController::class, 'show'])->name('master-timetable.show');
     Route::post('/master-timetable', [MasterTimetableController::class, 'generate'])->name('master-timetable.generate');
+    Route::get('/master-timetable/download', [MasterTimetableController::class, 'download'])->name('master-timetable.download');
+    Route::get('/master-timetable/week/{week}', [MasterTimetableController::class, 'getWeek'])->name('master-timetable.week');
+    Route::get('/master-timetable/start-test', [MasterTimetableController::class, 'startTest'])->name('master-timetable.start-test');
+
+    // Reading Plan Route
+    Route::get('/reading-plan', [ReadingPlanController::class, 'index'])->name('reading-plan.index');
+
+    // Tutor and Read Aloud
+    Route::get('/tutor', function() { return Inertia::render('Tutor/Show'); })->name('tutor.show');
+    Route::post('/tutor/explain', [\App\Http\Controllers\TutorController::class, 'explain'])->name('tutor.explain');
+    Route::get('/read-aloud', function() { return Inertia::render('ReadAloud/Show'); })->name('read-aloud.show');
 });
 
 // Admin-Only Routes

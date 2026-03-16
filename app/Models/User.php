@@ -50,4 +50,12 @@ class User extends Authenticatable
         return $this->hasMany(Test::class);
     }
     // =======================================================
+
+    /**
+     * Defines the "one-to-one" relationship: one User has one MasterTimetable.
+     */
+    public function masterTimetable(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MasterTimetable::class);
+    }
 }
