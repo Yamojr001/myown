@@ -21,6 +21,15 @@ Route::get('/', function () {
     ]);
 });
 
+// Legal Pages
+Route::get('/terms', function () {
+    return Inertia::render('Terms');
+})->name('terms');
+
+Route::get('/privacy', function () {
+    return Inertia::render('Privacy');
+})->name('privacy');
+
 // General Authenticated User Routes
 Route::middleware(['auth', 'verified'])->group(function () {
     

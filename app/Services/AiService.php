@@ -323,9 +323,9 @@ class AiService {
             5. Distribute content evenly with realistic weekly study hours.
             6. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above. Do not skip any courses in any week, even if the estimated hours are low.
             7. CRITICAL: To prevent token limits, you MUST return MINIFIED JSON. Do NOT use any line breaks, indentation, or unnecessary whitespace.
-            8. CRITICAL: Keep all `topics` and `tasks` string arrays extremely concise. Summarize them in under 8 words per item, max 2 items. You MUST complete all {$semesterWeeks} weeks before stopping.
+            8. CRITICAL: Keep all `topics` and `tasks` string arrays extremely concise (under 8 words per item). Provide exactly 3 to 4 `tasks` per course. For `pages_to_read`, ALWAYS provide a range (e.g., '10-25' or '45-60') instead of a single number. You MUST complete all {$semesterWeeks} weeks before stopping.
             9. Return JSON strictly matching this structure:
-               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"topics\":[\"Topic 1\",\"Topic 2\"],\"pages_to_read\":\"10-20\",\"tasks\":[\"Read chapter\",\"Practice exercises\"],\"estimated_hours\":2},{\"course\":\"Second Course Name\",\"topics\":[\"Topic A\"],\"pages_to_read\":\"20-30\",\"tasks\":[\"Review lectures\"],\"estimated_hours\":3}],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false,\"test_prep\":\"None\"}}
+               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"topics\":[\"Topic 1\",\"Topic 2\"],\"pages_to_read\":\"10-25\",\"tasks\":[\"Read chapter\",\"Practice exercises\",\"Review notes\",\"Create flashcards\"],\"estimated_hours\":2},{\"course\":\"Second Course Name\",\"topics\":[\"Topic A\"],\"pages_to_read\":\"20-35\",\"tasks\":[\"Review lectures\",\"Take practice quiz\",\"Summarize points\"],\"estimated_hours\":3}],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false,\"test_prep\":\"None\"}}
             10. Weekly study hours: {$preferences['study_hours']} hours.
             11. For test weeks, reduce study hours by 50% and focus on review.
             12. The week before a test should be focused on review and practice.
