@@ -704,6 +704,25 @@ Questions and Answers:
         return $cleaned;
     }
 
+    public function generateDailyAdvice(string $text, array $topics)
+    {
+        $topicList = implode(', ', $topics);
+        $prompt = "You are a friendly and encouraging academic tutor. I will provide a short excerpt from a student's reading material and the topics they should focus on today. 
+        
+        Your task:
+        1. Provide 2-3 specific study suggestions or mnemonic tips for these topics.
+        2. Give 1 sentence of 'Advice of the Day' based on the content.
+        3. Maintain a motivating and concise tone.
+        4. Format your response in clean Markdown (bullet points, bold text).
+        5. Return ONLY the Markdown explanation, no JSON.
+
+        TOPICS: {$topicList}
+        EXTRACT: \"\"\"" . substr($text, 0, 2000) . "\"\"\"";
+
+        $responseContent = $this->callGemini($prompt, 30, 1024, 'text/plain');
+        return $this->cleanJsonResponse($responseContent) ?: "Focus on understanding the core concepts and try explaining them to someone else!";
+    }
+
     public function cleanJsonResponse(?string $responseContent): ?string
     {
         if ($responseContent === null) return null;

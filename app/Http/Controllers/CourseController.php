@@ -20,7 +20,10 @@ class CourseController extends Controller
     public function index()
     {
         return Inertia::render('MyCourses', [
-            'courses' => Auth::user()->courses()->orderBy('created_at', 'desc')->get(),
+            'courses' => Auth::user()->courses()
+                            ->where('semester_id', Auth::user()->current_semester_id)
+                            ->orderBy('created_at', 'desc')
+                            ->get(),
             'flash' => [ 'message' => session('message'), 'error' => session('error') ]
         ]);
     }
@@ -39,6 +42,7 @@ class CourseController extends Controller
         $course = Auth::user()->courses()->create([
             'title' => $validated['title'],
             'code' => $validated['code'],
+            'semester_id' => Auth::user()->current_semester_id,
             'file_path' => null, // Files are not stored permanently for now, just text
             'status' => 'Analyzing Syllabus...',
         ]);

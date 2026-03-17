@@ -47,13 +47,13 @@ export default function Show({ auth, course, weakTopics, suggestion, flash = {} 
                         </div>
                     ) : (
                         <div className="bg-brand-white rounded-xl shadow-lg p-8 text-center">
-                            <i className="fas fa-lightbulb text-5xl text-brand-orange mb-4"></i>
+                            <i className="fas fa-lightbulb text-5xl text-brand-blue mb-4"></i>
                             <h3 className="text-2xl font-bold text-brand-text">Ready to Generate Your Study Guide?</h3>
                             <p className="text-brand-secondary mt-2 mb-4">The AI will use your lecture notes to create a personalized reading plan based on these weak topics:</p>
-                            
+
                             <div className="flex flex-wrap justify-center gap-2 my-6">
                                 {weakTopics && weakTopics.length > 0 ? (
-                                    weakTopics.map((topic, index) => <span key={index} className="bg-brand-orange/10 text-brand-orange text-sm font-semibold px-3 py-1.5 rounded-full">{topic}</span>)
+                                    weakTopics.map((topic, index) => <span key={index} className="bg-brand-blue/10 text-brand-blue text-sm font-semibold px-3 py-1.5 rounded-full">{topic}</span>)
                                 ) : (
                                     <p className="text-brand-secondary font-semibold">No weak topics found from your last test. Great job!</p>
                                 )}

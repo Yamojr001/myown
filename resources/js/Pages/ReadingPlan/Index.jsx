@@ -74,7 +74,7 @@ export default function Index({ auth, weeklySchedule, week, totalWeeks, semester
                                         <h3 className="text-lg font-bold text-brand-blue">{course.course}</h3>
                                         <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 font-medium">
                                             <span className="flex items-center bg-white px-2 py-1 rounded shadow-sm">
-                                                <i className="fas fa-book-open text-brand-orange mr-2"></i>
+                                                <i className="fas fa-book-open text-brand-blue mr-2"></i>
                                                 {course.pages_to_read} Pages
                                             </span>
                                             <span className="flex items-center bg-white px-2 py-1 rounded shadow-sm">
@@ -90,7 +90,7 @@ export default function Index({ auth, weeklySchedule, week, totalWeeks, semester
                                                 <h4 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Focus Topics</h4>
                                                 <div className="flex flex-wrap gap-2">
                                                     {course.topics.map((topic, tidx) => (
-                                                        <span key={tidx} className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-xs font-semibold">
+                                                        <span key={tidx} className="px-2 py-1 bg-brand-blue/5 text-brand-blue border border-brand-blue/10 rounded text-xs font-semibold">
                                                             {topic}
                                                         </span>
                                                     ))}

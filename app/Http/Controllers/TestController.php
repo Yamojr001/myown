@@ -25,7 +25,7 @@ class TestController extends Controller
      */
     public function index()
     {
-        $courses = Auth::user()->courses()->get();
+        $courses = Auth::user()->courses()->where('semester_id', Auth::user()->current_semester_id)->get();
         return Inertia::render('Tests/Index', [
             'courses' => $courses
         ]);

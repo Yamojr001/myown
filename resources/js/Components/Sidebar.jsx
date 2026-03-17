@@ -66,7 +66,7 @@ export default function Sidebar({ user, showing }) {
                         <hr className="border-gray-700" />
                     </div>
 
-                    <SidebarLink href="#" active={isActive('history')}>
+                    <SidebarLink href={route('history.index')} active={isActive('history.index')}>
                         <i className="fas fa-history w-6 mr-3 text-center"></i>
                         History
                     </SidebarLink>
@@ -78,7 +78,7 @@ export default function Sidebar({ user, showing }) {
                     {/* Admin Link - only shows if user.is_admin is true */}
                     {user.is_admin && (
                         <SidebarLink href={route('admin.dashboard')} active={isActive('admin.dashboard')}>
-                            <i className="fas fa-user-shield w-6 mr-3 text-center text-brand-orange"></i>
+                            <i className="fas fa-user-shield w-6 mr-3 text-center text-brand-blue"></i>
                             Admin Panel
                         </SidebarLink>
                     )}
@@ -90,7 +90,7 @@ export default function Sidebar({ user, showing }) {
                         method="post"
                         href={route('logout')}
                         as="button"
-                        className="w-full text-left text-gray-400 hover:bg-red-500/20 hover:text-white flex items-center px-4 py-3 text-sm font-semibold rounded-lg transition-colors duration-200"
+                        className="w-full text-left text-gray-400 hover:bg-brand-blue/20 hover:text-white flex items-center px-4 py-3 text-sm font-semibold rounded-lg transition-colors duration-200"
                     >
                         <i className="fas fa-sign-out-alt w-6 mr-3 text-center"></i>
                         Logout

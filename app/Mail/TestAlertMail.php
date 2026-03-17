@@ -8,35 +8,30 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ReadingReminderMail extends Mailable
+class TestAlertMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $user;
-    public $assignments;
-    public $weekNumber;
+    public $testInfo;
 
-    /**
-     * @param $assignments Array of [course, title, topics, page_range, extracted_text, advice]
-     */
-    public function __construct($user, $assignments, $weekNumber)
+    public function __construct($user, $testInfo)
     {
         $this->user = $user;
-        $this->assignments = $assignments;
-        $this->weekNumber = $weekNumber;
+        $this->testInfo = $testInfo;
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "📚 Your Daily Study Flash - Week {$this->weekNumber}",
+            subject: "⚠️ Alert: Upcoming {$this->testInfo['name']} this week!",
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.reading_reminder',
+            markdown: 'emails.test_alert',
         );
     }
 }

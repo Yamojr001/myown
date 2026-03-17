@@ -17,6 +17,11 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'school',
+        'department',
+        'level',
+        'avatar',
+        'current_semester_id',
     ];
 
     protected $hidden = [
@@ -45,11 +50,28 @@ class User extends Authenticatable
     // ADD THIS FUNCTION
     // This defines the "one-to-many" relationship: one User has many Tests.
     // =======================================================
+    // =======================================================
     public function tests(): HasMany
     {
         return $this->hasMany(Test::class);
     }
     // =======================================================
+
+    /**
+     * Defines the "one-to-many" relationship: one User has many Semesters.
+     */
+    public function semesters(): HasMany
+    {
+        return $this->hasMany(Semester::class);
+    }
+
+    /**
+     * Defines the "belongsTo" relationship for the active semester context.
+     */
+    public function currentSemester(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Semester::class, 'current_semester_id');
+    }
 
     /**
      * Defines the "one-to-one" relationship: one User has one MasterTimetable.

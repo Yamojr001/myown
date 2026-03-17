@@ -108,9 +108,9 @@ export default function MyCourses({ auth, courses, flash }) {
     const renderCourseAction = (course) => {
         switch (course.status) {
             case 'Pre-Test Needed':
-                return <Link href={route('courses.test.show', course.id)} className="w-full text-center px-4 py-2 bg-brand-orange text-white rounded-lg hover:bg-opacity-80 font-semibold">Take Pre-Test</Link>;
+                return <Link href={route('courses.test.show', course.id)} className="w-full text-center px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-opacity-80 font-semibold">Take Pre-Test</Link>;
             case 'AI Analysis Failed':
-                return <Link href={'#'} className="w-full text-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-opacity-80 font-semibold">Retry Analysis</Link>;
+                return <Link href={'#'} className="w-full text-center px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-opacity-80 font-semibold">Retry Analysis</Link>;
             case 'Analyzing Syllabus...':
                 return <button disabled className="w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Analyzing...</button>;
             default:
@@ -125,7 +125,7 @@ export default function MyCourses({ auth, courses, flash }) {
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="flex justify-end mb-4">
-                        <PrimaryButton onClick={openModal} className="bg-brand-orange hover:bg-opacity-90"><i className="fas fa-plus mr-2"></i>Add New Course</PrimaryButton>
+                        <PrimaryButton onClick={openModal} className="bg-brand-blue hover:bg-blue-700"><i className="fas fa-plus mr-2"></i>Add New Course</PrimaryButton>
                     </div>
                     {flash.message && <div className="mb-4 p-4 bg-green-100 text-green-800 border border-green-300 rounded-lg">{flash.message}</div>}
                     {flash.error && <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded-lg">{flash.error}</div>}

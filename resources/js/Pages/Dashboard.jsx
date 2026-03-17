@@ -14,7 +14,7 @@ const StatCard = ({ icon, title, value, colorClass = 'text-brand-blue' }) => (
 
 // The main Dashboard component
 export default function Dashboard({ auth, recentCourses, latestTest, stats }) {
-    
+
     const getAiInsight = () => { /* ... (This function is unchanged) ... */ };
     const renderCourseAction = (course) => { /* ... (This function is unchanged) ... */ };
 
@@ -24,7 +24,7 @@ export default function Dashboard({ auth, recentCourses, latestTest, stats }) {
 
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
-                    
+
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-brand-text">Welcome Back, {auth.user.name.split(' ')[0]}!</h1>
                         <p className="text-brand-secondary mt-1">Here is your academic command center.</p>
@@ -34,9 +34,9 @@ export default function Dashboard({ auth, recentCourses, latestTest, stats }) {
                         <StatCard icon="fa-bullseye" title="Average Score" value={stats?.averageScore ? `${stats.averageScore}%` : 'N/A'} />
                         <StatCard icon="fa-book-open" title="Active Courses" value={stats?.totalCourses ?? 0} />
                         <div className="p-6 bg-gradient-to-br from-brand-dark to-slate-800 rounded-xl shadow-lg flex items-center gap-6">
-                            <div className="text-3xl text-brand-orange"><i className="fas fa-lightbulb"></i></div>
+                            <div className="text-3xl text-brand-blue"><i className="fas fa-lightbulb"></i></div>
                             <div>
-                                <h3 className="text-sm font-semibold text-brand-orange uppercase tracking-wider">AI Insight</h3>
+                                <h3 className="text-sm font-semibold text-brand-blue uppercase tracking-wider">AI Insight</h3>
                                 <p className="text-md text-gray-200">{getAiInsight()}</p>
                             </div>
                         </div>
@@ -47,7 +47,7 @@ export default function Dashboard({ auth, recentCourses, latestTest, stats }) {
                             <h3 className="text-xl font-bold text-brand-text">Recent Courses</h3>
                             <Link href={route('courses.index')} className="text-sm text-brand-blue hover:underline font-semibold">View All</Link>
                         </div>
-                        
+
                         {recentCourses && recentCourses.length > 0 ? (
                             <ul className="divide-y divide-gray-200">{/* ... (list rendering is unchanged) ... */}</ul>
                         ) : (

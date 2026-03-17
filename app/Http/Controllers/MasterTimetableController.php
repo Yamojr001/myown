@@ -17,7 +17,7 @@ class MasterTimetableController extends Controller
     public function show()
     {
         $user = Auth::user();
-        $courses = $user->courses()->with('tests')->get();
+        $courses = $user->courses()->where('semester_id', $user->current_semester_id)->with('tests')->get();
         $timetable = $user->masterTimetable;
 
         $coursesData = [];
@@ -97,7 +97,7 @@ class MasterTimetableController extends Controller
         ]);
 
         $user = Auth::user();
-        $courses = $user->courses()->with('tests')->get();
+        $courses = $user->courses()->where('semester_id', $user->current_semester_id)->with('tests')->get();
         $parser = new Parser();
         $coursesForAI = [];
 
@@ -158,6 +158,7 @@ class MasterTimetableController extends Controller
                 'semester_start_date' => $preferences['semester_start_date'],
                 'current_week' => 1,
                 'test_schedule' => $testSchedule,
+                'preferences' => $preferences,
                 'next_test_week' => $testSchedule[0]['week'],
             ]
         );

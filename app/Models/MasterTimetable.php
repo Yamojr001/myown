@@ -19,6 +19,7 @@ class MasterTimetable extends Model
         'semester_start_date',
         'weekly_schedule',
         'test_schedule',
+        'preferences',
         'current_week',
         'next_test_week',
     ];
@@ -27,6 +28,7 @@ class MasterTimetable extends Model
         'schedule' => 'array',
         'weekly_schedule' => 'array',
         'test_schedule' => 'array',
+        'preferences' => 'array',
         'semester_start_date' => 'date',
     ];
 

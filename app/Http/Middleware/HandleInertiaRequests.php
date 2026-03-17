@@ -32,7 +32,13 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? $request->user()->load('currentSemester', 'semesters') : null,
+            ],
+            'active_alerts' => fn () => $request->user() ? app(\App\Services\ProactiveStudyService::class)->getDailyAssignment($request->user()) : null,
+            'test_alert' => fn () => $request->user() ? app(\App\Services\ProactiveStudyService::class)->getActiveTestAlert($request->user()) : null,
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+                'error' => fn () => $request->session()->get('error'),
             ],
         ];
     }

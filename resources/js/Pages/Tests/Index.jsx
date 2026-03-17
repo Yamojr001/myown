@@ -38,10 +38,10 @@ export default function Index({ auth, courses }) {
 
                     {courses.length === 0 ? (
                         <div className="bg-brand-white overflow-hidden shadow-sm sm:rounded-2xl p-10 text-center">
-                            <i className="fas fa-book-open text-6xl text-brand-orange/30 mb-4"></i>
+                            <i className="fas fa-book-open text-6xl text-brand-blue/30 mb-4"></i>
                             <h3 className="text-xl font-bold text-brand-dark">No Courses Found</h3>
                             <p className="text-brand-secondary mt-2 mb-6">You need to upload at least one course syllabus before you can generate tests.</p>
-                            <Link href={route('courses.index')} className="bg-brand-orange text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition">
+                            <Link href={route('courses.index')} className="bg-brand-blue text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition">
                                 Add a Course Now
                             </Link>
                         </div>
@@ -51,19 +51,19 @@ export default function Index({ auth, courses }) {
                             <div className="flex flex-wrap border-b border-gray-200">
                                 <button
                                     onClick={() => handleTabChange('Mid-Semester', 50)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mid-Semester' ? 'bg-brand-orange/10 text-brand-orange border-b-2 border-brand-orange' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mid-Semester' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-file-alt mr-2"></i> Mid-Semester Test
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('Mock Exam', 5)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mock Exam' ? 'bg-brand-orange/10 text-brand-orange border-b-2 border-brand-orange' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mock Exam' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-pen-nib mr-2"></i> Mock Exam (Essay)
                                 </button>
                                 <button
                                     onClick={() => handleTabChange('Random Test', 20)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Random Test' ? 'bg-brand-orange/10 text-brand-orange border-b-2 border-brand-orange' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Random Test' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-dice mr-2"></i> Random Test
                                 </button>
@@ -88,7 +88,7 @@ export default function Index({ auth, courses }) {
                                     <div>
                                         <label className="block text-sm font-bold text-brand-dark mb-2">Select Course to Test On</label>
                                         <select
-                                            className="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-orange focus:ring focus:ring-brand-orange/20"
+                                            className="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-blue focus:ring focus:ring-brand-blue/20"
                                             value={data.course_id}
                                             onChange={(e) => setData('course_id', e.target.value)}
                                             required
@@ -107,7 +107,7 @@ export default function Index({ auth, courses }) {
                                                 type="number"
                                                 min="5"
                                                 max="100"
-                                                className="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-orange focus:ring focus:ring-brand-orange/20"
+                                                className="w-full border-gray-300 rounded-xl shadow-sm focus:border-brand-blue focus:ring focus:ring-brand-blue/20"
                                                 value={data.question_count}
                                                 onChange={(e) => setData('question_count', e.target.value)}
                                                 required
@@ -122,7 +122,7 @@ export default function Index({ auth, courses }) {
                                         <button
                                             type="submit"
                                             disabled={processing}
-                                            className="w-full py-4 bg-brand-orange text-white rounded-xl shadow-xl shadow-brand-orange/30 font-black text-lg hover:-translate-y-1 transition-transform disabled:opacity-50 flex items-center justify-center gap-3"
+                                            className="w-full py-4 bg-brand-blue text-white rounded-xl shadow-xl shadow-brand-blue/30 font-black text-lg hover:-translate-y-1 transition-transform disabled:opacity-50 flex items-center justify-center gap-3"
                                         >
                                             {processing ? (
                                                 <><i className="fas fa-spinner fa-spin"></i> Generating Test...</>

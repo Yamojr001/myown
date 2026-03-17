@@ -5,8 +5,10 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SuggestionController;
+use App\Http\Controllers\SemesterController; // <-- IMPORT
 use App\Http\Controllers\MasterTimetableController;
 use App\Http\Controllers\ReadingPlanController; // <-- IMPORT
+use App\Http\Controllers\HistoryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -40,6 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
+    // Semester Management
+    Route::post('/semesters', [SemesterController::class, 'store'])->name('semesters.store');
+    Route::post('/semesters/switch', [SemesterController::class, 'switch'])->name('semesters.switch');
+    
     // Course Management & Testing
     Route::get('/my-courses', [CourseController::class, 'index'])->name('courses.index');
     Route::post('/courses/extract-text', [CourseController::class, 'extractText'])->name('courses.extract-text');
@@ -70,6 +76,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Reading Plan Route
     Route::get('/reading-plan', [ReadingPlanController::class, 'index'])->name('reading-plan.index');
+
+    // History Route
+    Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
 
     // Tutor and Read Aloud
     Route::get('/tutor', function() { return Inertia::render('Tutor/Show'); })->name('tutor.show');

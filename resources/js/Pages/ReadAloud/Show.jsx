@@ -223,7 +223,7 @@ export default function Show({ auth }) {
                                 ) : (
                                     <button
                                         onClick={stop}
-                                        className="flex-1 sm:flex-none bg-red-500 text-white px-8 py-3 rounded-lg font-bold hover:bg-red-600 transition-colors shadow animate-pulse"
+                                        className="flex-1 sm:flex-none bg-brand-dark text-white px-8 py-3 rounded-lg font-bold hover:bg-slate-800 transition-colors shadow animate-pulse"
                                     >
                                         <i className="fas fa-stop mr-2"></i> Stop
                                     </button>

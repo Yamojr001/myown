@@ -10,6 +10,9 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('app:send-study-notifications')->dailyAt('07:00');
+    })
     ->withMiddleware(function (Middleware $middleware) { // <-- Removed the ': void' for compatibility if needed, but it's fine either way
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,

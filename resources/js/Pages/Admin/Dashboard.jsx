@@ -16,9 +16,9 @@ export default function Dashboard({ auth }) {
                             Welcome to the Admin Control Center, {auth.user.name}.
                         </div>
                     </div>
-                    
+
                     <div className="mt-6 p-6 bg-brand-dark rounded-lg shadow">
-                        <h5 className="mb-2 text-2xl font-bold tracking-tight text-brand-orange">
+                        <h5 className="mb-2 text-2xl font-bold tracking-tight text-brand-blue">
                             System Monitoring
                         </h5>
                         <p className="font-normal text-gray-300">

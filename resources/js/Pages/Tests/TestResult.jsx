@@ -4,15 +4,15 @@ export default function TestResult({ testResult }) {
     const score = testResult.score;
     const weakTopics = testResult.weak_topics || [];
     const courseTitle = testResult.course.title;
-    
-    let scoreColorClass = 'text-green-600';
-    let scoreBgClass = 'bg-green-100';
+
+    let scoreColorClass = 'text-brand-blue';
+    let scoreBgClass = 'bg-brand-blue/10';
     if (score < 50) {
-        scoreColorClass = 'text-red-600';
-        scoreBgClass = 'bg-red-100';
+        scoreColorClass = 'text-brand-dark';
+        scoreBgClass = 'bg-gray-200';
     } else if (score < 75) {
-        scoreColorClass = 'text-yellow-600';
-        scoreBgClass = 'bg-yellow-100';
+        scoreColorClass = 'text-brand-blue';
+        scoreBgClass = 'bg-brand-blue/5';
     }
 
     return (
@@ -20,7 +20,7 @@ export default function TestResult({ testResult }) {
             <Head title="Test Results" />
             <div className="min-h-screen bg-brand-light flex items-center justify-center font-sans p-4">
                 <div className="max-w-2xl w-full bg-brand-white p-8 sm:p-12 rounded-2xl shadow-xl text-center">
-                    
+
                     <h1 className="text-3xl font-bold text-brand-text">Pre-Test Results</h1>
                     <p className="text-brand-secondary mt-1 mb-8">For {courseTitle}</p>
 
@@ -34,13 +34,13 @@ export default function TestResult({ testResult }) {
                     {weakTopics.length > 0 ? (
                         <div className="mt-10">
                             <h3 className="text-xl font-semibold text-brand-text flex items-center justify-center gap-2">
-                                <i className="fas fa-bullseye text-brand-orange"></i>
+                                <i className="fas fa-bullseye text-brand-blue"></i>
                                 Your AI-Identified Focus Areas
                             </h3>
                             <p className="text-brand-secondary mt-2 mb-5">Your new study plan will prioritize these topics.</p>
                             <div className="flex flex-wrap justify-center gap-3">
                                 {weakTopics.map((topic, index) => (
-                                    <span key={index} className="bg-brand-orange/10 text-brand-orange text-sm font-semibold px-4 py-2 rounded-full">
+                                    <span key={index} className="bg-brand-blue/10 text-brand-blue text-sm font-semibold px-4 py-2 rounded-full">
                                         {topic}
                                     </span>
                                 ))}
@@ -55,8 +55,8 @@ export default function TestResult({ testResult }) {
                     )}
 
                     <div className="mt-12">
-                        <Link 
-                            href={route('courses.index')} 
+                        <Link
+                            href={route('courses.index')}
                             className="w-full sm:w-auto px-8 py-3 bg-brand-blue text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105"
                         >
                             Back to My Courses

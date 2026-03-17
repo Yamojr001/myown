@@ -100,7 +100,7 @@ export default function MockExam({ auth, course, questions, testType }) {
                             {questions.map((q, questionIndex) => (
                                 <div key={questionIndex} className="mb-10 pb-10 border-b border-gray-100 last:border-b-0 last:mb-0 last:pb-0">
                                     <div className="flex gap-4 mb-5">
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-orange/10 text-brand-orange flex items-center justify-center font-bold">
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-brand-blue/10 text-brand-blue flex items-center justify-center font-bold">
                                             {questionIndex + 1}
                                         </div>
                                         <div className="flex-1">
@@ -110,7 +110,7 @@ export default function MockExam({ auth, course, questions, testType }) {
 
                                             <div className="relative">
                                                 <textarea
-                                                    className={`w-full h-40 p-4 pb-12 rounded-xl text-brand-dark resize-none transition-colors border-2 ${isRecording === questionIndex ? 'border-brand-orange ring-4 ring-brand-orange/20' : 'border-gray-200 focus:border-brand-blue focus:ring-brand-blue/20'}`}
+                                                    className={`w-full h-40 p-4 pb-12 rounded-xl text-brand-dark resize-none transition-colors border-2 ${isRecording === questionIndex ? 'border-brand-blue ring-4 ring-brand-blue/20' : 'border-gray-200 focus:border-brand-blue focus:ring-brand-blue/20'}`}
                                                     placeholder="Type your essay answer here..."
                                                     value={data.answers[questionIndex]}
                                                     onChange={(e) => handleAnswerChange(questionIndex, e.target.value)}
@@ -120,7 +120,7 @@ export default function MockExam({ auth, course, questions, testType }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleRecording(questionIndex)}
-                                                    className={`absolute bottom-4 right-4 px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all flex items-center gap-2 ${isRecording === questionIndex ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-brand-secondary hover:bg-gray-200 hover:text-brand-dark'}`}
+                                                    className={`absolute bottom-4 right-4 px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all flex items-center gap-2 ${isRecording === questionIndex ? 'bg-brand-dark text-white animate-pulse' : 'bg-gray-100 text-brand-secondary hover:bg-gray-200 hover:text-brand-dark'}`}
                                                 >
                                                     {isRecording === questionIndex ? (
                                                         <><i className="fas fa-stop-circle"></i> Stop Recording</>
@@ -130,7 +130,7 @@ export default function MockExam({ auth, course, questions, testType }) {
                                                 </button>
                                             </div>
                                             {isRecording === questionIndex && (
-                                                <p className="text-xs text-brand-orange mt-2 font-bold animate-pulse">
+                                                <p className="text-xs text-brand-blue mt-2 font-bold animate-pulse">
                                                     <i className="fas fa-satellite-dish mr-1"></i> Listening... Speak clearly into your microphone.
                                                 </p>
                                             )}
@@ -144,7 +144,7 @@ export default function MockExam({ auth, course, questions, testType }) {
                                     {processing ? <><i className="fas fa-spinner fa-spin mr-2"></i> Auto-Grading Essay...</> : <><i className="fas fa-robot mr-2"></i> Submit for AI Grading</>}
                                 </button>
                                 <p className="text-center text-xs text-brand-secondary mt-4">
-                                    <i className="fas fa-bolt text-brand-orange mr-1"></i> Your essays will be evaluated by Gemini 2.5 Flash.
+                                    <i className="fas fa-bolt text-brand-blue mr-1"></i> Your essays will be evaluated by Gemini 2.5 Flash.
                                 </p>
                             </div>
                         </form>
