@@ -1,8 +1,8 @@
-import React from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function PreTest({ auth, course, questions }) {
+export default function ObjectiveTest({ auth, course, questions, totalQuestions, testType }) {
     const { data, setData, post, processing } = useForm({
         answers: Array(questions.length).fill(null),
     });
@@ -15,24 +15,22 @@ export default function PreTest({ auth, course, questions }) {
 
     const submit = (e) => {
         e.preventDefault();
-        post(route('courses.test.store', course.id));
+        post(route('tests.store.objective'));
     };
 
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={<h2 className="font-bold text-xl text-brand-dark leading-tight">Pre-Test - {course.title}</h2>}
+            header={<h2 className="font-bold text-xl text-brand-dark leading-tight">{testType} - {course.title}</h2>}
         >
-            <Head title={`Pre-Test - ${course.title}`} />
-
+            <Head title={`${testType} - ${course.title}`} />
             <div className="min-h-screen bg-brand-light font-sans py-12">
                 <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center mb-8">
-                        <span className="bg-brand-blue/10 text-brand-blue font-black px-4 py-1.5 rounded-full text-sm uppercase tracking-wide">Initial Knowledge Check</span>
-                        <h1 className="text-3xl font-black text-brand-dark mt-4">Course Pre-Test</h1>
-                        <p className="text-brand-secondary mt-2 font-medium">{course.title} ({course.code}) &mdash; {questions.length} Questions</p>
-                        <p className="text-brand-secondary text-sm mt-1">This initial assessment helps PrePAI tailor the perfect study plan for you.</p>
+                        <span className="bg-brand-orange/10 text-brand-orange font-black px-4 py-1.5 rounded-full text-sm uppercase tracking-wide">Objective Multiple Choice</span>
+                        <h1 className="text-3xl font-black text-brand-dark mt-4">{testType}</h1>
+                        <p className="text-brand-secondary mt-2 font-medium">{course.title} ({course.code}) &mdash; {totalQuestions} Questions</p>
                     </div>
 
                     <div className="bg-brand-white p-6 sm:p-10 rounded-2xl shadow-xl border border-gray-100">
@@ -65,12 +63,8 @@ export default function PreTest({ auth, course, questions }) {
                             ))}
 
                             <div className="mt-12 text-center pt-8 border-t border-gray-200">
-                                <button type="submit" disabled={processing} className="w-full sm:w-auto px-12 py-4 bg-brand-blue text-white font-black rounded-xl shadow-xl shadow-brand-blue/30 hover:bg-blue-600 hover:-translate-y-1 disabled:opacity-50 transition-all text-lg flex items-center justify-center gap-2 mx-auto">
-                                    {processing ? (
-                                        <><i className="fas fa-spinner fa-spin"></i> Submitting...</>
-                                    ) : (
-                                        <><i className="fas fa-check-circle"></i> Submit & See Results</>
-                                    )}
+                                <button type="submit" disabled={processing} className="w-full sm:w-auto px-12 py-4 bg-brand-orange text-white font-black rounded-xl shadow-xl shadow-brand-orange/30 hover:bg-orange-600 hover:-translate-y-1 disabled:opacity-50 transition-all text-lg">
+                                    {processing ? <><i className="fas fa-spinner fa-spin mr-2"></i> Submitting...</> : <><i className="fas fa-check-circle mr-2"></i> Submit {testType}</>}
                                 </button>
                             </div>
                         </form>

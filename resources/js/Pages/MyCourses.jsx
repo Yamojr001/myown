@@ -183,25 +183,31 @@ export default function MyCourses({ auth, courses, flash }) {
                         />
                         <p className="text-xs text-gray-500 mt-2">Supported: PDF, PNG, JPG, TXT, PPTX (Max 15MB each)</p>
 
-                        {/* File Status List */}
                         {fileStatuses.length > 0 && (
                             <div className="mt-4 space-y-2">
                                 {fileStatuses.map((file) => (
-                                    <div key={file.id} className="flex items-center justify-between p-3 bg-white border rounded shadow-sm text-sm">
-                                        <div className="flex items-center space-x-3 w-3/4">
-                                            <i className="fas fa-file-alt text-gray-400"></i>
-                                            <span className="truncate flex-1 font-medium text-gray-700">{file.name}</span>
-                                        </div>
+                                    <div key={file.id} className="flex flex-col p-3 bg-white border border-gray-200 rounded lg shadow-sm">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center space-x-3 w-3/4">
+                                                <i className="fas fa-file-alt text-gray-400"></i>
+                                                <span className="truncate flex-1 font-medium text-gray-700">{file.name}</span>
+                                            </div>
 
-                                        <div className="flex items-center space-x-3">
-                                            {file.status === 'extracting' && <span className="text-blue-500 text-xs font-bold animate-pulse"><i className="fas fa-spinner fa-spin mr-1"></i> Extracting...</span>}
-                                            {file.status === 'success' && <span className="text-green-500 text-xs font-bold"><i className="fas fa-check-circle mr-1"></i> Ready</span>}
-                                            {file.status === 'error' && <span className="text-red-500 text-xs font-bold" title={file.error}><i className="fas fa-exclamation-circle mr-1"></i> Failed</span>}
+                                            <div className="flex items-center space-x-3">
+                                                {file.status === 'extracting' && <span className="text-blue-500 text-xs font-bold animate-pulse"><i className="fas fa-spinner fa-spin mr-1"></i> Extracting...</span>}
+                                                {file.status === 'success' && <span className="text-green-500 text-xs font-bold"><i className="fas fa-check-circle mr-1"></i> Ready</span>}
+                                                {file.status === 'error' && <span className="text-red-500 text-xs font-bold"><i className="fas fa-exclamation-circle mr-1"></i> Failed</span>}
 
-                                            <button type="button" onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                                                <i className="fas fa-times"></i>
-                                            </button>
+                                                <button type="button" onClick={() => removeFile(file.id)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                                    <i className="fas fa-times"></i>
+                                                </button>
+                                            </div>
                                         </div>
+                                        {file.status === 'error' && (
+                                            <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                                                {file.error}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

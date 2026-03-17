@@ -21,6 +21,97 @@ class TestController extends Controller
     }
 
     /**
+     * Dashboard with all tests types
+     */
+    public function index()
+    {
+        $courses = Auth::user()->courses()->get();
+        return Inertia::render('Tests/Index', [
+            'courses' => $courses
+        ]);
+    }
+
+    /**
+     * Generate a dynamic test using AI
+     */
+    public function generate(Request $request)
+    {
+        $validated = $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'test_type' => 'required|string',
+            'question_count' => 'required|integer|min:5|max:100',
+        ]);
+
+        $course = Auth::user()->courses()->findOrFail($validated['course_id']);
+        $testType = $validated['test_type'];
+        $questionCount = $validated['question_count'];
+        $isEssay = ($testType === 'Mock Exam');
+
+        $topics = is_array($course->topics) ? $course->topics : json_decode($course->topics, true);
+        if (!$topics || empty($topics)) {
+            return back()->with('error', 'Course has no extracted topics to test on.');
+        }
+
+        $testData = $this->aiService->generateTestFromTopics($topics, $questionCount, $isEssay);
+        
+        if (!$testData) {
+            return back()->with('error', 'AI failed to generate a test. Please try again.');
+        }
+
+        if (!$isEssay) {
+            foreach ($testData['questions'] as &$question) {
+                // Ensure correct array keys exist
+                if (isset($question['options']) && isset($question['correct_answer_index'])) {
+                    $correctAnswer = $question['options'][$question['correct_answer_index']];
+                    shuffle($question['options']);
+                    $question['correct_answer_index'] = array_search($correctAnswer, $question['options']);
+                }
+            }
+        }
+
+        session([
+            'test_questions' => $testData['questions'],
+            'test_course_id' => $course->id,
+            'test_type' => $testType,
+            'test_name' => $testType . ' Test',
+        ]);
+
+        return redirect()->route('tests.take');
+    }
+
+    /**
+     * View the actively generated test
+     */
+    public function take()
+    {
+        $questions = session('test_questions');
+        $courseId = session('test_course_id');
+        $testType = session('test_type');
+
+        if (!$questions || !$courseId) {
+            return redirect()->route('tests.index')->with('error', 'Test session expired. Please generate a new test.');
+        }
+
+        $course = Course::find($courseId);
+        $isEssay = ($testType === 'Mock Exam');
+
+        if ($isEssay) {
+            return Inertia::render('Tests/MockExam', [
+                'course' => $course,
+                'questions' => $questions,
+                'testType' => $testType,
+            ]);
+        }
+
+        return Inertia::render('Tests/ObjectiveTest', [
+            'course' => $course,
+            'questions' => $questions,
+            'totalQuestions' => count($questions),
+            'testType' => $testType,
+        ]);
+    }
+
+    /**
      * Display the results of a specific test.
      */
     public function showResult(Test $test)
@@ -52,13 +143,17 @@ class TestController extends Controller
             ->first();
 
         if ($existingTest) {
-            return redirect()->route('tests.result', $existingTest)
+            return redirect()->route('tests.result.show', $existingTest)
                 ->with('error', 'You have already taken this test.');
         }
 
-        // Extract topics from PDF
-        $filePath = storage_path('app/public/' . $course->file_path);
-        $topics = $this->aiService->extractTopicsFromPdf($filePath);
+        // Use course topics if available, else attempt to extract
+        $topics = is_array($course->topics) ? $course->topics : json_decode($course->topics, true);
+        
+        if (!$topics || empty($topics)) {
+            $filePath = storage_path('app/public/' . $course->file_path);
+            $topics = $this->aiService->extractTopicsFromPdf($filePath);
+        }
         
         if (!$topics || empty($topics)) {
             Log::error('Could not extract topics from PDF', [
@@ -112,9 +207,9 @@ class TestController extends Controller
     }
 
     /**
-     * Store test results
+     * Store objective test results
      */
-    public function store(Request $request)
+    public function storeObjective(Request $request)
     {
         $validated = $request->validate([
             'answers' => 'required|array',
@@ -199,7 +294,59 @@ class TestController extends Controller
             'score' => $score,
             'weak_topics' => $weakTopics,
             'test_id' => $test->id,
-            'redirect' => route('tests.result', $test)
+            'redirect' => route('tests.result.show', $test)
+        ]);
+    }
+
+    /**
+     * Store and AI-grade Mock Exam Essay responses
+     */
+    public function storeEssay(Request $request)
+    {
+        $validated = $request->validate([
+            'answers' => 'required|array',
+        ]);
+
+        $user = Auth::user();
+        $questions = session('test_questions');
+        $courseId = session('test_course_id');
+        $testType = session('test_type', 'Mock Exam');
+
+        if (!$questions || !$courseId) {
+            return response()->json(['error' => 'Test session expired.'], 400);
+        }
+
+        $course = Course::find($courseId);
+        if (!$course || $course->user_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized access.'], 403);
+        }
+
+        $aiResult = $this->aiService->markEssayTest($questions, $validated['answers']);
+        
+        if (!$aiResult) {
+            return response()->json(['error' => 'AI grading failed. Please try again.'], 500);
+        }
+
+        $test = Test::create([
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'type' => $testType,
+            'score' => $aiResult['score'],
+            'weak_topics' => array_slice(array_unique($aiResult['weak_topics']), 0, 10),
+            'taken_date' => now(),
+        ]);
+
+        session()->forget(['test_questions', 'test_course_id', 'test_type', 'test_name']);
+
+        $this->updateMasterTimetable($user, $testType);
+
+        return response()->json([
+            'success' => true,
+            'score' => $aiResult['score'],
+            'weak_topics' => $aiResult['weak_topics'],
+            'feedback' => $aiResult['feedback'],
+            'test_id' => $test->id,
+            'redirect' => route('tests.result.show', $test)
         ]);
     }
 

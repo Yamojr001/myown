@@ -41,6 +41,10 @@ export default function Sidebar({ user, showing }) {
                         <i className="fas fa-book-open w-6 mr-3 text-center"></i>
                         My Courses
                     </SidebarLink>
+                    <SidebarLink href={route('tests.index')} active={isActive('tests.index')}>
+                        <i className="fas fa-file-alt w-6 mr-3 text-center"></i>
+                        Tests & Assessments
+                    </SidebarLink>
                     <SidebarLink href={route('master-timetable.show')} active={isActive('master-timetable.show')}>
                         <i className="fas fa-calendar-alt w-6 mr-3 text-center"></i>
                         Master Timetable

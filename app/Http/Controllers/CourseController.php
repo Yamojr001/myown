@@ -72,17 +72,21 @@ class CourseController extends Controller
         $mimeType = $file->getMimeType();
         $extension = strtolower($file->getClientOriginalExtension());
         $extractedText = '';
+        $pageCount = 0;
         
         try {
             if ($extension === 'txt' || $mimeType === 'text/plain') {
                 $extractedText = file_get_contents($file->getRealPath());
+                $pageCount = max(1, ceil(str_word_count($extractedText) / 250)); // Estimate 250 words per page
             } elseif (in_array($extension, ['png', 'jpg', 'jpeg'])) {
                 $aiService = new AiService();
                 $extractedText = $aiService->extractTextFromImage($file->getRealPath(), $mimeType);
+                $pageCount = 1;
             } elseif ($extension === 'pdf') {
                 $parser = new Parser();
                 $pdf = $parser->parseFile($file->getRealPath());
                 $extractedText = $pdf->getText();
+                $pageCount = max(1, count($pdf->getPages()));
                 
                 // If PDF is mostly images, text will be very short. Use Gemini Vision as fallback.
                 if (strlen(trim($extractedText)) < 100) {
@@ -98,20 +102,29 @@ class CourseController extends Controller
                             if (strpos($entry, 'ppt/slides/slide') !== false && strpos($entry, '.xml') !== false) {
                                 $slideXml = $zip->getFromName($entry);
                                 $extractedText .= strip_tags($slideXml) . " ";
+                                $pageCount++;
                             }
                         }
                         $zip->close();
+                        $pageCount = max(1, $pageCount);
                     }
                 } else {
-                    throw new \Exception("Legacy .ppt files are not supported. Please convert to .pptx or PDF.");
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Legacy .ppt files are not supported. Please convert to .pptx or PDF.'
+                    ], 422);
                 }
             } else {
-                throw new \Exception("Unsupported file type: {$extension}. Supported: pdf, png, jpg, txt, pptx.");
+                return response()->json([
+                    'success' => false,
+                    'message' => "Unsupported file type: {$extension}. Supported: pdf, png, jpg, txt, pptx."
+                ], 422);
             }
             
             return response()->json([
                 'success' => true,
-                'text' => trim($extractedText)
+                'text' => trim($extractedText),
+                'pageCount' => $pageCount
             ]);
         } catch (\Exception $e) {
             \Log::error("Extraction failed: " . $e->getMessage());

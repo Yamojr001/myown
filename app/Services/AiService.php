@@ -95,19 +95,19 @@ class AiService {
         }
     }
 
-    public function generateTestFromTopics(array $topics) {
+    public function generateTestFromTopics(array $topics, int $questionCount = 50, bool $isEssay = false) {
         try {
             $topicList = implode(', ', $topics);
-            $prompt = "You are a test generation assistant. Based on the following topics, create a 50-question multiple-choice test. For each question, provide: a 'question' string, an 'options' array of 4 unique strings, and a 'correct_answer_index' (an integer from 0 to 3). The topics should be covered evenly. Ensure the entire response is a single, valid JSON object with a key 'questions' which contains an array of these question objects. Do not add any other text or explanation. The topics are: " . $topicList;
+            
+            if ($isEssay) {
+                $prompt = "You are an expert exam generator. Based on the following topics, create a {$questionCount}-question Essay/Short Answer Mock Exam. For each question, provide a 'question' string. The response MUST be a single valid JSON object with a key 'questions' containing an array of these objects (e.g. [{\"question\": \"...\"}]). Do not add any other text or markdown. The topics are: " . $topicList;
+            } else {
+                $prompt = "You are a test generation assistant. Based on the following topics, create a {$questionCount}-question multiple-choice test. For each question, provide: a 'question' string, an 'options' array of 4 unique strings, and a 'correct_answer_index' (an integer from 0 to 3). The topics should be covered evenly. Ensure the entire response is a single, valid JSON object with a key 'questions' which contains an array of these question objects. Do not add any other text or explanation. The topics are: " . $topicList;
+            }
 
-            \Log::info('AI Service: Generating test from topics', ['topics_count' => count($topics)]);
+            \Log::info('AI Service: Generating test from topics', ['topics_count' => count($topics), 'count' => $questionCount, 'isEssay' => $isEssay]);
             
             $responseContent = $this->callGemini($prompt, 120, 8000);
-            
-            \Log::info('AI Service: Raw test response', [
-                'response_length' => strlen($responseContent ?? ''),
-                'first_500' => substr($responseContent ?? '', 0, 500)
-            ]);
             
             if ($responseContent === null) {
                 \Log::error('AI Service: callGemini returned null for test generation');
@@ -116,55 +116,74 @@ class AiService {
 
             $responseContent = $this->cleanJsonResponse($responseContent);
 
-            \Log::info('AI Service: Cleaned test response', [
-                'first_200' => substr($responseContent, 0, 200)
-            ]);
-
             $testData = json_decode($responseContent, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
                 \Log::error('AI Service: JSON decode error for test', [
                     'error' => json_last_error_msg(),
-                    'response_content' => substr($responseContent, 0, 1000),
-                    'json_last_error' => json_last_error()
+                    'response_content' => substr($responseContent, 0, 1000)
                 ]);
                 return null;
             }
 
-            if (!isset($testData['questions'])) {
-                \Log::error('AI Service: questions key missing in test data', [
-                    'test_data_keys' => array_keys($testData),
-                    'test_data' => $testData
-                ]);
-                return null;
-            }
-
-            if (!is_array($testData['questions'])) {
-                \Log::error('AI Service: questions is not an array', [
-                    'questions_type' => gettype($testData['questions'])
-                ]);
+            if (!isset($testData['questions']) || !is_array($testData['questions'])) {
                 return null;
             }
 
             // Validate each question has required fields
-            foreach ($testData['questions'] as $index => $question) {
-                if (!isset($question['question'], $question['options'], $question['correct_answer_index'])) {
-                    \Log::error('AI Service: Missing required fields in question', [
-                        'question_index' => $index,
-                        'question_data' => $question
-                    ]);
-                    return null;
+            foreach ($testData['questions'] as $index => &$question) {
+                if ($isEssay) {
+                    if (!isset($question['question'])) return null;
+                } else {
+                    if (!isset($question['question'], $question['options'], $question['correct_answer_index'])) return null;
+                }
+                
+                // For essays, we won't have options to shuffle later, so add a flag
+                if ($isEssay) {
+                    $question['is_essay'] = true;
                 }
             }
 
-            \Log::info('AI Service: Successfully generated test', [
-                'question_count' => count($testData['questions'])
-            ]);
-            
             return $testData;
 
         } catch (\Exception $e) {
             \Log::error('AI Service Test Generation Failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function markEssayTest(array $questions, array $answers) {
+        try {
+            $qnaList = "";
+            foreach ($questions as $index => $q) {
+                $userAns = $answers[$index] ?? "No answer provided.";
+                $qnaList .= "Q" . ($index + 1) . ": " . $q['question'] . "\nStudent Answer: " . $userAns . "\n\n";
+            }
+
+            $prompt = "You are an expert university professor grading an essay exam. I will provide a list of questions and the student's corresponding answers. Grade each answer out of 100 based on accuracy, completeness, and understanding. Focus on the core concepts.
+
+Your output must be a single valid JSON object containing exactly these keys:
+1. 'score': The overall average score out of 100 (integer).
+2. 'weak_topics': An array of up to 5 strings representing the topics the student struggled with the most based on their low-scoring answers. Provide brief topic names only.
+3. 'feedback': A brief paragraph of overall constructive feedback.
+
+Questions and Answers:
+{$qnaList}";
+
+            $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 60));
+            if (!$responseContent) return null;
+
+            $resultData = json_decode($responseContent, true);
+            if (json_last_error() !== JSON_ERROR_NONE) return null;
+
+            return [
+                'score' => $resultData['score'] ?? 0,
+                'weak_topics' => $resultData['weak_topics'] ?? [],
+                'feedback' => $resultData['feedback'] ?? "Test evaluated successfully."
+            ];
+
+        } catch (\Exception $e) {
+            \Log::error('AI Service Essay Marking Failed: ' . $e->getMessage());
             return null;
         }
     }

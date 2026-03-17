@@ -16,6 +16,7 @@ class Test extends Model
         'type',
         'score',
         'weak_topics',
+        'taken_date',
     ];
 
     protected $casts = [

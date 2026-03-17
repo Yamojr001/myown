@@ -47,6 +47,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');
     Route::post('/courses/{course}/pre-test', [CourseController::class, 'storeTest'])->name('courses.test.store');
+
+    // Advanced Testing Dashboard
+    Route::get('/tests', [TestController::class, 'index'])->name('tests.index');
+    Route::post('/tests/generate', [TestController::class, 'generate'])->name('tests.generate');
+    Route::get('/tests/take', [TestController::class, 'take'])->name('tests.take');
+    Route::post('/tests/store-objective', [TestController::class, 'storeObjective'])->name('tests.store.objective');
+    Route::post('/tests/store-essay', [TestController::class, 'storeEssay'])->name('tests.store.essay');
     Route::get('/tests/{test}/results', [TestController::class, 'showResult'])->name('tests.result.show');
 
     // AI Suggestion Routes
