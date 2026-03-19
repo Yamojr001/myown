@@ -116,10 +116,12 @@ class MasterTimetableController extends Controller
             } catch (\Exception $e) { }
 
             $coursesForAI[] = [
+                'id' => $course->id,
                 'title' => $course->title,
                 'score' => $latestTest ? $latestTest->score : 50,
                 'page_count' => $pageCount > 0 ? $pageCount : 100, // Fallback priority if no physical PDF exists
                 'weak_topics' => $latestTest && $latestTest->weak_topics ? $latestTest->weak_topics : [],
+                'full_content' => $course->full_content,
             ];
         }
 

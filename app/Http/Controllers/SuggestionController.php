@@ -50,8 +50,12 @@ class SuggestionController extends Controller
         // =======================================================
         $aiService = new AiService(config('services.gemini.api_key'));
         
-        $fullPath = storage_path('app/public/' . $course->file_path);
-        $markdownContent = $aiService->generateStudyGuide($fullPath, $weakTopics);
+        $content = $course->full_content;
+        if (empty($content)) {
+            return back()->with('error', 'Course content is missing. Please try re-uploading the course.');
+        }
+
+        $markdownContent = $aiService->generateStudyGuide($content, $weakTopics);
 
         if (!$markdownContent) {
             return back()->with('error', 'The AI failed to generate a study guide at this time. Please try again later.');
@@ -80,6 +84,6 @@ class SuggestionController extends Controller
         $pdfHtml = "<html><head><style>body { font-family: sans-serif; } h1, h2, h3 { color: #0a2540; } code { background: #f0f2f5; padding: 2px 4px; border-radius: 4px; } ul { list-style-type: disc; margin-left: 20px; }</style></head><body>" . $html . "</body></html>";
 
         $pdf = Pdf::loadHTML($pdfHtml);
-        return $pdf->download('PrepAI-Study-Guide-' . $suggestion->course->code . '.pdf');
+        return $pdf->download('Phronix AI-Study-Guide-' . $suggestion->course->code . '.pdf');
     }
 }

@@ -14,8 +14,10 @@ export default function MyCourses({ auth, courses, flash }) {
     const fileInputRef = useRef(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
-        title: '', code: '', syllabus_text: '',
+        title: '', code: '', credit_unit: '', syllabus_text: '',
     });
+
+    const isProfileComplete = !!(auth.user.school && auth.user.department);
 
     const openModal = () => setIsModalOpen(true);
 
@@ -125,7 +127,15 @@ export default function MyCourses({ auth, courses, flash }) {
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="flex justify-end mb-4">
-                        <PrimaryButton onClick={openModal} className="bg-brand-blue hover:bg-blue-700"><i className="fas fa-plus mr-2"></i>Add New Course</PrimaryButton>
+                        {isProfileComplete ? (
+                            <PrimaryButton onClick={openModal} className="bg-brand-blue hover:bg-blue-700">
+                                <i className="fas fa-plus mr-2"></i>Add New Course
+                            </PrimaryButton>
+                        ) : (
+                            <Link href={route('profile.edit')} className="inline-flex items-center px-4 py-2 bg-brand-orange text-white rounded-md font-semibold text-xs uppercase tracking-widest hover:bg-opacity-80 transition ease-in-out duration-150">
+                                <i className="fas fa-user-edit mr-2"></i>Update Profile to Add Courses
+                            </Link>
+                        )}
                     </div>
                     {flash.message && <div className="mb-4 p-4 bg-green-100 text-green-800 border border-green-300 rounded-lg">{flash.message}</div>}
                     {flash.error && <div className="mb-4 p-4 bg-red-100 text-red-800 border border-red-300 rounded-lg">{flash.error}</div>}
@@ -165,6 +175,22 @@ export default function MyCourses({ auth, courses, flash }) {
                         <InputLabel htmlFor="code" value="Course Code" />
                         <TextInput id="code" name="code" value={data.code} className="mt-1 block w-full" onChange={(e) => setData('code', e.target.value)} required />
                         <InputError message={errors.code} className="mt-2" />
+                    </div>
+
+                    <div className="mt-4">
+                        <InputLabel htmlFor="credit_unit" value="Credit Unit" />
+                        <TextInput 
+                            id="credit_unit" 
+                            name="credit_unit" 
+                            type="number" 
+                            min="1" 
+                            max="10"
+                            value={data.credit_unit} 
+                            className="mt-1 block w-full" 
+                            onChange={(e) => setData('credit_unit', e.target.value)} 
+                            required 
+                        />
+                        <InputError message={errors.credit_unit} className="mt-2" />
                     </div>
 
                     <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">

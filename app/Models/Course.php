@@ -23,4 +23,26 @@ class Course extends Model
     {
         return $this->hasOne(Timetable::class);
     }
+
+    /**
+     * Get the full course content from the shared table.
+     */
+    public function getFullContentAttribute()
+    {
+        $user = $this->user;
+        if (!$user) return null;
+
+        $year = (int)date('Y');
+        $semester = $this->semester;
+        if ($semester && preg_match('/\b(20\d{2})\b/', $semester->name, $matches)) {
+            $year = (int)$matches[1];
+        }
+
+        return CourseContent::where([
+            'school' => $user->school,
+            'department' => $user->department,
+            'year' => $year,
+            'course_code' => $this->code,
+        ])->value('content');
+    }
 }

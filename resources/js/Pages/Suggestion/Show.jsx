@@ -34,15 +34,62 @@ export default function Show({ auth, course, weakTopics, suggestion, flash = {} 
                     )}
 
                     {suggestion ? (
-                        <div className="bg-brand-white rounded-xl shadow-lg">
-                            <div className="p-6 border-b flex justify-between items-center">
-                                <h3 className="text-xl font-bold text-brand-text">Your Personalized Plan</h3>
-                                <Link href={route('suggestion.download', suggestion.id)} className="px-4 py-2 bg-brand-blue text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-opacity-80">
-                                    <i className="fas fa-download mr-2"></i> Download PDF
-                                </Link>
+                        <div className="bg-white rounded-[2rem] shadow-2xl shadow-brand-blue/5 overflow-hidden border border-gray-100 mb-12">
+                            <div className="bg-gradient-to-r from-brand-blue to-brand-dark p-8 md:p-12 text-white relative overflow-hidden">
+                                {/* Decorative elements */}
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+                                <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-blue/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
+                                
+                                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                    <div>
+                                        <div className="inline-flex items-center px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold uppercase tracking-widest mb-4 ring-1 ring-white/30">
+                                            <i className="fas fa-sparkles mr-2 text-yellow-300"></i>
+                                            AI-Powered Roadmap
+                                        </div>
+                                        <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">Your Personalized <br/>Study Plan</h3>
+                                    </div>
+                                    <Link 
+                                        href={route('suggestion.download', suggestion.id)} 
+                                        className="inline-flex items-center justify-center px-8 py-4 bg-white text-brand-blue font-black rounded-2xl shadow-xl hover:bg-brand-light transition-all active:scale-95 group"
+                                    >
+                                        <i className="fas fa-file-pdf mr-3 group-hover:scale-110 transition-transform"></i> 
+                                        Download PDF
+                                    </Link>
+                                </div>
                             </div>
-                            <div className="prose max-w-none p-6">
-                                <ReactMarkdown>{suggestion.content}</ReactMarkdown>
+                            
+                            <div className="p-8 md:p-16">
+                                <article className="prose prose-lg prose-blue max-w-none">
+                                    <ReactMarkdown
+                                        components={{
+                                            h1: ({node, ...props}) => <h1 className="text-4xl font-black text-brand-dark mb-10 pb-6 border-b-4 border-brand-blue/10 tracking-tight" {...props} />,
+                                            h2: ({node, ...props}) => <h2 className="text-2xl font-black text-brand-dark mt-12 mb-6 flex items-center tracking-tight" {...props} />,
+                                            h3: ({node, ...props}) => <h3 className="text-lg font-bold text-brand-blue uppercase tracking-widest mt-8 mb-4 italic" {...props} />,
+                                            p: ({node, ...props}) => <p className="text-gray-600 leading-relaxed mb-6" {...props} />,
+                                            strong: ({node, ...props}) => <strong className="text-brand-dark font-black" {...props} />,
+                                            ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-6 space-y-2 text-gray-600" {...props} />,
+                                            ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-6 space-y-2 text-gray-600" {...props} />,
+                                            li: ({node, ...props}) => <li className="pl-2" {...props} />,
+                                        }}
+                                    >
+                                        {suggestion.content}
+                                    </ReactMarkdown>
+                                </article>
+                            </div>
+
+                            <div className="p-8 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="text-sm text-gray-400 font-medium italic">
+                                    <i className="fas fa-info-circle mr-2"></i>
+                                    Generated based on your weak topics and course materials.
+                                </div>
+                                <button 
+                                    onClick={generateGuide} 
+                                    disabled={processing}
+                                    className="text-brand-blue font-bold hover:underline flex items-center gap-2 text-sm"
+                                >
+                                    <i className="fas fa-sync-alt"></i>
+                                    Regenerate Plan
+                                </button>
                             </div>
                         </div>
                     ) : (

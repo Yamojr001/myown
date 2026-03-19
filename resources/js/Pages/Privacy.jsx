@@ -14,7 +14,7 @@ export default function Privacy() {
                 </p>
 
                 <p>
-                    At PrepAI, accessible from our platform, one of our main priorities is the privacy of our visitors and users. This Privacy Policy document contains types of information that is collected and recorded by PrepAI and how we use it.
+                    At Phronix AI, accessible from our platform, one of our main priorities is the privacy of our visitors and users. This Privacy Policy document contains types of information that is collected and recorded by Phronix AI and how we use it.
                 </p>
 
                 <h2 className="text-brand-blue mt-6 font-bold">1. Information We Collect</h2>

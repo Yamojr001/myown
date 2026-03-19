@@ -85,6 +85,13 @@ export default function Index({ auth, weeklySchedule, week, totalWeeks, semester
                                     </div>
 
                                     <div className="p-4 flex-1">
+                                        {course.reading_summary && (
+                                            <div className="mb-4 p-3 bg-brand-blue/5 border-l-4 border-brand-blue rounded-r-lg">
+                                                <h4 className="font-semibold text-gray-700 text-xs uppercase tracking-wide mb-1">Reading Summary</h4>
+                                                <p className="text-sm text-gray-700 italic">"{course.reading_summary}"</p>
+                                            </div>
+                                        )}
+
                                         {course.topics && course.topics.length > 0 && (
                                             <div className="mb-4">
                                                 <h4 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Focus Topics</h4>

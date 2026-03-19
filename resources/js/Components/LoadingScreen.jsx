@@ -46,7 +46,7 @@ export default function LoadingScreen() {
                     {/* Inner Logo */}
                     <div className="flex flex-col items-center justify-center z-10 bg-white/40 rounded-full h-24 w-24 shadow-sm border border-brand-blue/20">
                         <i className="fas fa-brain text-brand-blue text-4xl mb-1 mt-1"></i>
-                        <h1 className="text-sm font-black text-brand-text tracking-tight leading-none">PrepAI</h1>
+                        <h1 className="text-[10px] font-black text-brand-text tracking-tight leading-none uppercase">Phronix AI</h1>
                     </div>
                 </div>
 

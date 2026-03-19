@@ -26,7 +26,7 @@ export default function Sidebar({ user, showing }) {
             {/* Logo */}
             <div className="text-center mb-10">
                 <Link href={route('dashboard')} className="text-2xl font-extrabold text-white">
-                    <i className="fas fa-brain text-brand-blue"></i> PrepAI
+                    <i className="fas fa-brain text-brand-blue"></i> Phronix AI
                 </Link>
             </div>
 
@@ -44,6 +44,10 @@ export default function Sidebar({ user, showing }) {
                     <SidebarLink href={route('tests.index')} active={isActive('tests.index')}>
                         <i className="fas fa-file-alt w-6 mr-3 text-center"></i>
                         Tests & Assessments
+                    </SidebarLink>
+                    <SidebarLink href={route('past-questions.index')} active={isActive('past-questions.index')}>
+                        <i className="fas fa-question-circle w-6 mr-3 text-center"></i>
+                        Past Questions
                     </SidebarLink>
                     <SidebarLink href={route('master-timetable.show')} active={isActive('master-timetable.show')}>
                         <i className="fas fa-calendar-alt w-6 mr-3 text-center"></i>

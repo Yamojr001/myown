@@ -33,19 +33,49 @@ class CourseController extends Controller
      */
     public function store(Request $request)
     {
+        $user = Auth::user();
+
+        // 1. Profile Check: Ensure school and department are set
+        if (empty($user->school) || empty($user->department)) {
+            return redirect()->route('profile.edit')->with('error', 'Please update your school and department in your profile before uploading a course.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'code' => 'required|string|max:50',
+            'credit_unit' => 'required|integer|min:1|max:10',
             'syllabus_text' => 'required|string',
         ]);
         
-        $course = Auth::user()->courses()->create([
+        $course = $user->courses()->create([
             'title' => $validated['title'],
             'code' => $validated['code'],
-            'semester_id' => Auth::user()->current_semester_id,
+            'credit_unit' => $validated['credit_unit'],
+            'semester_id' => $user->current_semester_id,
             'file_path' => null, // Files are not stored permanently for now, just text
             'status' => 'Analyzing Syllabus...',
         ]);
+
+        // 2. CourseContent Uniqueness & Storage
+        $semester = $user->currentSemester;
+        $year = (int)date('Y'); // Default to current calendar year
+        
+        // Try to extract year from semester name (e.g., "2023/2024" -> 2023)
+        if ($semester && preg_match('/\b(20\d{2})\b/', $semester->name, $matches)) {
+            $year = (int)$matches[1];
+        }
+
+        \App\Models\CourseContent::firstOrCreate(
+            [
+                'school' => $user->school,
+                'department' => $user->department,
+                'year' => $year,
+                'course_code' => $validated['code'],
+            ],
+            [
+                'content' => $validated['syllabus_text'],
+            ]
+        );
 
         try {
             $aiService = new AiService();
@@ -163,12 +193,14 @@ class CourseController extends Controller
     public function showTest(Course $course)
     {
         Gate::authorize('view', $course);
-        if (empty($course->topics)) {
-            return redirect(route('courses.index'))->with('error', 'AI analysis failed or is not complete for this course.');
+        
+        $content = $course->full_content;
+        if (empty($content)) {
+            return redirect(route('courses.index'))->with('error', 'Course content is missing. Please try re-uploading the course.');
         }
         
         $aiService = new AiService(config('services.gemini.api_key'));
-        $testData = $aiService->generateTestFromTopics($course->topics);
+        $testData = $aiService->generateTestFromContent($content);
 
         if (!$testData || !isset($testData['questions'])) {
             return redirect(route('courses.index'))->with('error', 'The AI failed to generate a test. Please try again later.');

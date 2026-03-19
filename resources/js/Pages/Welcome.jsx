@@ -65,7 +65,7 @@ export default function Welcome({ auth }) {
                 <header className={`fixed top-0 left-0 w-full z-50 transition-shadow duration-300 ${isScrolled ? 'shadow-lg bg-white/80 backdrop-blur-lg' : 'bg-transparent'}`}>
                     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
                         <Link href="/" className="text-2xl font-bold text-brand-dark flex items-center gap-2">
-                            <i className="fas fa-brain text-brand-blue"></i> PrepAI
+                            <i className="fas fa-brain text-brand-blue"></i> Phronix AI
                         </Link>
                         <div className="hidden md:flex items-center gap-8">
                             {navLinks.map(link => <a key={link.href} href={link.href} className="font-semibold hover:text-brand-blue transition-colors">{link.label}</a>)}
@@ -115,7 +115,7 @@ export default function Welcome({ auth }) {
 
                     <div className="container mx-auto px-6 text-center relative z-10">
                         <span className="inline-block bg-brand-blue/20 text-brand-blue border border-brand-blue/30 px-5 py-2 rounded-full font-bold text-sm mb-6 tracking-wide shadow-lg">🚀 The Ultimate AI-Powered Study Architect</span>
-                        <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">Master Your Syllabus with <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-cyan-400">Precision AI</span></h1>
+                        <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">Master Your Syllabus with <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-cyan-400">Phronix AI</span></h1>
                         <p className="max-w-3xl mx-auto text-xl text-gray-300 mb-10 font-light leading-relaxed">Upload any course material and let our AI generate a perfectly optimized reading plan, diagnostic tests, and an adaptive weekly timetable tailored to your weak spots.</p>
                         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                             <Button href={route('register')} className="bg-brand-blue text-white hover:bg-blue-700 shadow-xl shadow-brand-blue/30 w-full sm:w-auto text-lg">Start for Free Today <i className="fas fa-arrow-right ml-2"></i></Button>
@@ -166,7 +166,7 @@ export default function Welcome({ auth }) {
                         </div>
                         <FaqItem question="How does the AI generate study plans?" answer="Our AI analyzes your course materials to identify key topics. After you complete the diagnostic test, it assesses your strengths and weaknesses to create a personalized study timetable." isActive={activeFaq === 0} onClick={() => handleFaqClick(0)} />
                         <FaqItem question="What file formats are supported?" answer="We currently support PDF documents for course syllabi and lecture notes." isActive={activeFaq === 1} onClick={() => handleFaqClick(1)} />
-                        <FaqItem question="Can I use PrepAI for multiple courses?" answer="Yes! The Free plan allows up to 5 courses, while the Pro plan offers unlimited course management." isActive={activeFaq === 2} onClick={() => handleFaqClick(2)} />
+                        <FaqItem question="Can I use Phronix AI for multiple courses?" answer="Yes! The Free plan allows up to 5 courses, while the Pro plan offers unlimited course management." isActive={activeFaq === 2} onClick={() => handleFaqClick(2)} />
                     </div>
                 </section>
 
@@ -177,7 +177,7 @@ export default function Welcome({ auth }) {
                     </div>
                     <div className="container mx-auto px-6 text-center relative z-10">
                         <h2 className="text-4xl md:text-5xl font-black text-white">Upgrade to Limitless Learning</h2>
-                        <p className="text-xl text-blue-100 mt-6 mb-12 max-w-2xl mx-auto font-medium">Join thousands of students who are already achieving top decile grades with the full power of PrepAI Adaptive Timetables and Vision Analysis.</p>
+                        <p className="text-xl text-blue-100 mt-6 mb-12 max-w-2xl mx-auto font-medium">Join thousands of students who are already achieving top decile grades with the full power of Phronix AI Adaptive Timetables and Vision Analysis.</p>
 
                         <div className="flex flex-col md:flex-row justify-center w-full max-w-5xl mx-auto gap-8 text-left">
 
@@ -221,7 +221,7 @@ export default function Welcome({ auth }) {
                     <div className="container mx-auto px-6 pb-8">
                         <div className="text-center">
                             <Link href="/" className="text-2xl font-bold text-white flex items-center justify-center gap-2 mb-4">
-                                <i className="fas fa-brain text-brand-blue"></i> PrepAI
+                                <i className="fas fa-brain text-brand-blue"></i> Phronix AI
                             </Link>
                             <p className="max-w-md mx-auto mb-6">Your personal AI study architect, designed for academic excellence.</p>
                             <div className="flex justify-center gap-6 mb-8">
@@ -231,7 +231,7 @@ export default function Welcome({ auth }) {
                             </div>
                         </div>
                         <div className="border-t border-gray-700 pt-8 text-center text-sm">
-                            <p>&copy; {new Date().getFullYear()} PrepAI. All Rights Reserved.</p>
+                            <p>&copy; {new Date().getFullYear()} Phronix AI. All Rights Reserved.</p>
                         </div>
                     </div>
                 </footer>

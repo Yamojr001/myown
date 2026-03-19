@@ -15,12 +15,12 @@ export default function Terms() {
 
                 <h2 className="text-brand-blue mt-6 font-bold">1. Agreement to Terms</h2>
                 <p>
-                    By accessing or using the PrepAI platform, you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you may not access the service.
+                    By accessing or using the Phronix AI platform, you agree to be bound by these Terms and Conditions. If you disagree with any part of these terms, you may not access the service.
                 </p>
 
                 <h2 className="text-brand-blue mt-6 font-bold">2. Intellectual Property</h2>
                 <p>
-                    The platform and its original content, features, and functionality are owned by PrepAI and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws. AI-generated study materials are provided for personal educational use only.
+                    The platform and its original content, features, and functionality are owned by Phronix AI and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws. AI-generated study materials are provided for personal educational use only.
                 </p>
 
                 <h2 className="text-brand-blue mt-6 font-bold">3. User Accounts</h2>
@@ -35,7 +35,7 @@ export default function Terms() {
 
                 <h2 className="text-brand-blue mt-6 font-bold">5. Limitation of Liability</h2>
                 <p>
-                    In no event shall PrepAI, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
+                    In no event shall Phronix AI, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
                 </p>
             </div>
 

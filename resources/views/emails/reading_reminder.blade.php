@@ -1,4 +1,14 @@
 @component('mail::message')
+<div style="text-align: center; margin: 0 auto 15px; padding: 0;">
+    <img src="{{ $message->embed(public_path('images/branding/logo.png')) }}" alt="Phronix AI Logo" style="height: 55px; vertical-align: middle;">
+</div>
+
+<div style="text-align: center; height: 0; padding: 0; margin: 0; overflow: visible; position: relative; pointer-events: none;">
+    <div style="display: inline-block; opacity: 0.15; padding-top: 55px;">
+        <img src="{{ $message->embed(public_path('images/branding/watermark.png')) }}" alt="Phronix AI Watermark" style="width: 240px; height: 240px;">
+    </div>
+</div>
+
 # Hello {{ $user->name }}! 📚
 
 It's time for today's study session. Here is your personalized daily reading breakdown for **Week {{ $weekNumber }}**:
@@ -38,5 +48,6 @@ Go to Dashboard
 Keep up the great work! Consistent reading is the key to mastery.
 
 Best regards,  
-The PrepAI Team
+**The Phronix AI Team**
+</div>
 @endcomponent

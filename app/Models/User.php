@@ -17,6 +17,8 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'is_active',
+        'subscribed_to_newsletter',
         'school',
         'department',
         'level',
@@ -35,6 +37,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_active' => 'boolean',
+            'subscribed_to_newsletter' => 'boolean',
         ];
     }
     

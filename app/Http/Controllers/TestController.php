@@ -47,12 +47,12 @@ class TestController extends Controller
         $questionCount = $validated['question_count'];
         $isEssay = ($testType === 'Mock Exam');
 
-        $topics = is_array($course->topics) ? $course->topics : json_decode($course->topics, true);
-        if (!$topics || empty($topics)) {
-            return back()->with('error', 'Course has no extracted topics to test on.');
+        $content = $course->full_content;
+        if (!$content || empty($content)) {
+            return back()->with('error', 'Course has no extracted content to test on.');
         }
 
-        $testData = $this->aiService->generateTestFromTopics($topics, $questionCount, $isEssay);
+        $testData = $this->aiService->generateTestFromContent($content, $questionCount, $isEssay);
         
         if (!$testData) {
             return back()->with('error', 'AI failed to generate a test. Please try again.');
@@ -147,31 +147,17 @@ class TestController extends Controller
                 ->with('error', 'You have already taken this test.');
         }
 
-        // Use course topics if available, else attempt to extract
-        $topics = is_array($course->topics) ? $course->topics : json_decode($course->topics, true);
-        
-        if (!$topics || empty($topics)) {
-            $filePath = storage_path('app/public/' . $course->file_path);
-            $topics = $this->aiService->extractTopicsFromPdf($filePath);
-        }
-        
-        if (!$topics || empty($topics)) {
-            Log::error('Could not extract topics from PDF', [
-                'course_id' => $course->id,
-                'file_path' => $filePath
-            ]);
-            
-            return back()->with('error', 'Could not extract topics from the syllabus. Please make sure the PDF contains readable text.');
+        $content = $course->full_content;
+        if (!$content || empty($content)) {
+            return back()->with('error', 'Course content is missing. Please try re-uploading the course.');
         }
 
-        // Generate test from topics
-        $testData = $this->aiService->generateTestFromTopics($topics);
+        // Generate test from content
+        $testData = $this->aiService->generateTestFromContent($content);
         
         if (!$testData) {
             Log::error('Failed to generate test data', [
                 'course_id' => $course->id,
-                'topics_count' => count($topics),
-                'topics' => $topics
             ]);
             
             return back()->with('error', 'The AI failed to generate a test. Please try again later.');

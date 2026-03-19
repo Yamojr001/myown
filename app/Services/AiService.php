@@ -95,19 +95,47 @@ class AiService {
         }
     }
 
-    public function generateTestFromTopics(array $topics, int $questionCount = 50, bool $isEssay = false) {
+    public function generateTestFromContent(string $content, int $questionCount = 50, bool $isEssay = false) {
         try {
-            $topicList = implode(', ', $topics);
+            $contentExcerpt = substr($content, 0, 150000); // 150k chars is plenty for most syllabi
             
             if ($isEssay) {
-                $prompt = "You are an expert exam generator. Based on the following topics, create a {$questionCount}-question Essay/Short Answer Mock Exam. For each question, provide a 'question' string. The response MUST be a single valid JSON object with a key 'questions' containing an array of these objects (e.g. [{\"question\": \"...\"}]). Do not add any other text or markdown. The topics are: " . $topicList;
+                $prompt = "You are an expert exam generator. Based on the following COURSE CONTENT, create a {$questionCount}-question Essay/Short Answer Mock Exam. 
+                
+                CONTENT-SPECIFIC RULES:
+                1. Focus ONLY on core academic concepts, principles, and technical details.
+                2. AVOID trivial questions about authors, presentation dates, universities, or document metadata.
+                3. STRICTLY use ONLY the information provided in the course content below. 
+                
+                JSON RULES:
+                - Return a single valid JSON object with a key 'questions' containing an array of objects: [{\"question\": \"...\"}].
+                - Do NOT include any control characters (newlines, tabs) inside the JSON string values.
+                
+                COURSE CONTENT:
+                \"\"\"{$contentExcerpt}\"\"\"";
             } else {
-                $prompt = "You are a test generation assistant. Based on the following topics, create a {$questionCount}-question multiple-choice test. For each question, provide: a 'question' string, an 'options' array of 4 unique strings, and a 'correct_answer_index' (an integer from 0 to 3). The topics should be covered evenly. Ensure the entire response is a single, valid JSON object with a key 'questions' which contains an array of these question objects. Do not add any other text or explanation. The topics are: " . $topicList;
+                $prompt = "You are a test generation assistant. Based on the following COURSE CONTENT, create a {$questionCount}-question multiple-choice test. 
+                
+                CONTENT-SPECIFIC RULES:
+                1. Focus ONLY on core academic concepts, definitions, and technical knowledge.
+                2. AVOID 'stupid' or trivial questions about authors, document titles, page numbers, or administrative metadata.
+                3. STRICTLY use ONLY the information provided in the course content below.
+                
+                JSON RULES:
+                - Return a single valid JSON object with a key 'questions' containing an array of objects: [{\"question\": \"...\", \"options\": [\"A\", \"B\", \"C\", \"D\"], \"correct_answer_index\": 0}].
+                - Ensure all options are unique and plausible.
+                - Do NOT use control characters like literal newlines or tabs within strings.
+                
+                COURSE CONTENT:
+                \"\"\"{$contentExcerpt}\"\"\"";
             }
 
-            \Log::info('AI Service: Generating test from topics', ['topics_count' => count($topics), 'count' => $questionCount, 'isEssay' => $isEssay]);
+            \Log::info('AI Service: Generating test from content', ['content_length' => strlen($content), 'count' => $questionCount, 'isEssay' => $isEssay]);
             
-            $responseContent = $this->callGemini($prompt, 120, 8000);
+            // Re-adjust prompt for extreme conciseness to avoid truncation at 50 questions
+            $prompt .= "\n\nIMPORTANT: Be extremely CONCISE in your questions and options to ensure the entire JSON fits within the response limit. Do not add any filler text.";
+
+            $responseContent = $this->callGemini($prompt, 180, null);
             
             if ($responseContent === null) {
                 \Log::error('AI Service: callGemini returned null for test generation');
@@ -121,7 +149,8 @@ class AiService {
             if (json_last_error() !== JSON_ERROR_NONE) {
                 \Log::error('AI Service: JSON decode error for test', [
                     'error' => json_last_error_msg(),
-                    'response_content' => substr($responseContent, 0, 1000)
+                    'response_content' => substr($responseContent, 0, 1000),
+                    'full_length' => strlen($responseContent)
                 ]);
                 return null;
             }
@@ -188,22 +217,41 @@ Questions and Answers:
         }
     }
 
-    public function generateStudyGuide(string $pdfFilePath, array $weakTopics)
+    public function generateStudyGuide(string $content, array $weakTopics)
     {
         try {
-            if (!file_exists($pdfFilePath)) return null;
-            
-            $parser = new Parser();
-            $pdf = $parser->parseFile($pdfFilePath);
-            $lectureText = preg_replace('/\s+/', ' ', $pdf->getText());
-
-            if (empty($lectureText)) return null;
+            if (empty($content)) return null;
 
             $weakTopicsList = implode(', ', $weakTopics);
 
-            $prompt = "You are an expert academic tutor. I will provide the full text of a lecture note and a list of 'weak topics'. Your task is to create a detailed study guide focused only on these weak topics. RULES: 1. For each weak topic, you MUST base your explanations and examples directly on the provided lecture note text. Quote or paraphrase relevant sections. 2. If a weak topic is not explained in detail in the notes, you MUST explicitly state: 'This topic was not covered in detail in the provided notes, so here is a foundational explanation:' and then provide a clear summary from your general knowledge. 3. Format the entire study guide in Markdown. Use headings (#, ##), subheadings, bullet points (*), and bold text (**text**). For each topic, provide a summary, key points from the notes, and a simple 2-step reading plan. 4. Return your response as a single, valid JSON object with one key: \"study_guide_markdown\". Do not add any other text, just the JSON. LECTURE NOTE TEXT: \"\"\"{$lectureText}\"\"\" WEAK TOPICS: [{$weakTopicsList}]";
+            $prompt = "You are an expert academic tutor. I will provide the full text of a course syllabus/material and a list of 'weak topics'. Your task is to create a detailed study guide focused only on these weak topics. 
 
-            $responseContent = $this->cleanJsonResponse($this->callGemini($prompt));
+STRICT RULES: 
+1. You MUST base your explanations and examples DIRECTLY and EXCLUSIVELY on the provided course content. Do not bring in outside information.
+2. For each weak topic, you MUST provide exactly these three sub-sections:
+   - ### Detailed Summary
+   - ### Key Points (as bullet points)
+   - ### 2-Step Reading Plan (as a numbered list)
+   BASED ONLY on the provided text.
+3. If a weak topic is genuinely not mentioned in the provided text, state: 'This topic was not covered in the provided material.' Do NOT use external knowledge to explain it.
+
+Format the entire study guide in professional Markdown. 
+CRITICAL: Use proper Markdown heading symbols (#, ##, ###) for structure.
+DO NOT use bold text (**) for headings; use # instead.
+Use a main title (# Course Title Study Guide).
+Use secondary headings (## 1. Topic Name) for each topic.
+Use tertiary headings (### Detailed Summary, ### Key Points, etc.) for sub-sections.
+Use bullet points (*) for lists and bold text (**text**) ONLY for emphasis within paragraphs.
+Ensure there is a space after each # symbol (e.g., '# Title', not '#Title').
+
+Return your response as a single, valid JSON object with one key: \"study_guide_markdown\". Do not add any other text, just the JSON. 
+
+COURSE CONTENT: 
+\"\"\"" . substr($content, 0, 150000) . "\"\"\" 
+
+WEAK TOPICS: [{$weakTopicsList}]";
+
+            $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 120, null));
             if ($responseContent === null) {
                 \Log::error('AI Service: callGemini returned null for study guide');
                 return null;
@@ -309,7 +357,8 @@ Questions and Answers:
             $courseInfo = "";
             foreach ($prioritizedCourses as $c) {
                 $weakTopics = is_array($c['weak_topics']) ? implode(', ', array_slice($c['weak_topics'], 0, 3)) : 'None';
-                $courseInfo .= "- {$c['title']}: Score {$c['score']}%, Pages: {$c['page_count']}, Key Weak Topics: {$weakTopics}\n";
+                $contentSnippet = substr($c['full_content'] ?? 'No content provided.', 0, 30000); // Excerpt for context
+                $courseInfo .= "### {$c['title']}\n- Score: {$c['score']}%\n- Pages: {$c['page_count']}\n- Key Weak Topics: {$weakTopics}\n- CONTENT EXCERPT: \"\"\"{$contentSnippet}\"\"\"\n\n";
             }
 
             // Add test schedule info
@@ -329,25 +378,25 @@ Questions and Answers:
 
             $prompt = "You are an expert academic planner. Create a {$semesterWeeks}-week semester study plan.
 
-            COURSES (prioritized by need):
+            COURSES (derived from provided content):
             {$courseInfo}
 
             {$testInfo}
 
-            RULES:
+            STRICT RULES:
             1. Create a week-by-week plan for {$semesterWeeks} weeks.
-            2. Prioritize courses with LOWER scores and MORE pages.
-            3. Include focused review weeks before each test.
-            4. Test weeks should have reduced study load or focus on review only.
+            2. You MUST STRICTLY use ONLY the information provided in the COURSE CONTENT excerpts above. Do not include external topics or knowledge.
+            3. Prioritize courses with LOWER scores and MORE pages.
+            4. Include focused review weeks before each test.
             5. Distribute content evenly with realistic weekly study hours.
-            6. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above. Do not skip any courses in any week, even if the estimated hours are low.
-            7. CRITICAL: To prevent token limits, you MUST return MINIFIED JSON. Do NOT use any line breaks, indentation, or unnecessary whitespace.
-            8. CRITICAL: Keep all `topics` and `tasks` string arrays extremely concise (under 8 words per item). Provide exactly 3 to 4 `tasks` per course. For `pages_to_read`, ALWAYS provide a range (e.g., '10-25' or '45-60') instead of a single number. You MUST complete all {$semesterWeeks} weeks before stopping.
-            9. Return JSON strictly matching this structure:
-               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"topics\":[\"Topic 1\",\"Topic 2\"],\"pages_to_read\":\"10-25\",\"tasks\":[\"Read chapter\",\"Practice exercises\",\"Review notes\",\"Create flashcards\"],\"estimated_hours\":2},{\"course\":\"Second Course Name\",\"topics\":[\"Topic A\"],\"pages_to_read\":\"20-35\",\"tasks\":[\"Review lectures\",\"Take practice quiz\",\"Summarize points\"],\"estimated_hours\":3}],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false,\"test_prep\":\"None\"}}
-            10. Weekly study hours: {$preferences['study_hours']} hours.
-            11. For test weeks, reduce study hours by 50% and focus on review.
-            12. The week before a test should be focused on review and practice.
+            6. For each course per week, provide a 'reading_summary' string (max 25 words) that summarizes what to read based ONLY on the content.
+            7. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above.
+            8. CRITICAL: Return MINIFIED JSON.
+            9. Keep all `topics` and `tasks` string arrays extremely concise. Provide exactly 3 to 4 `tasks` per course.
+            10. Return JSON strictly matching this structure:
+               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"reading_summary\":\"Summary from content\",\"topics\":[\"Topic 1\"],\"pages_to_read\":\"10-25\",\"tasks\":[\"Task 1\"],\"estimated_hours\":2},...],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false}}
+            11. Weekly study hours: {$preferences['study_hours']} hours.
+            12. For test weeks, reduce study hours by 50% and focus on review.
             13. Constraints: {$constraints}";
 
             $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 60));
@@ -741,7 +790,7 @@ Questions and Answers:
         
         $cleaned = trim($cleaned);
         
-        if (str_starts_with($cleaned, '"') && str_ends_with($cleaned, '"')) {
+        if (str_starts_with($cleaned, '"') && str_ends_with($cleaned, '"') && (!str_starts_with($cleaned, '{') && !str_starts_with($cleaned, '['))) {
             $cleaned = substr($cleaned, 1, -1);
             $cleaned = str_replace('\"', '"', $cleaned);
         }
@@ -749,27 +798,33 @@ Questions and Answers:
         // Replace all literal newlines, carriage returns, and tabs with spaces.
         // This safely flattens the JSON string into one line, completely removing any 
         // unescaped control characters Gemini injects inside string values that cause json_decode to fail.
-        $cleaned = str_replace(["\n", "\r", "\t"], ' ', $cleaned);
+        $cleaned = str_replace(["\r", "\t", "\n"], ' ', $cleaned);
         
-        // Strip any remaining invisible control characters
+        // Strip any remaining invisible control characters (0-31 and 127)
+        // This is a safety measure against non-printable characters.
         $cleaned = preg_replace('/[\x00-\x1F\x7F]/', '', $cleaned);
         
         return $cleaned;
     }
 
-    private function callGemini($prompt, $timeout = 45, $maxOutputTokens = 8192, $mimeType = 'application/json') {
+    private function callGemini($prompt, $timeout = 45, $maxOutputTokens = null, $mimeType = 'application/json') {
         $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $this->apiKey;
 
         try {
+            $generationConfig = [
+                'responseMimeType' => $mimeType, 
+                'temperature' => 0.3,
+            ];
+
+            if ($maxOutputTokens) {
+                $generationConfig['maxOutputTokens'] = $maxOutputTokens;
+            }
+
             $response = $this->client->post($apiUrl, [
                 'headers' => ['Content-Type'  => 'application/json'],
                 'json' => [
                     'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => [
-                        'responseMimeType' => $mimeType, 
-                        'temperature' => 0.3,
-                        'maxOutputTokens' => $maxOutputTokens
-                    ]
+                    'generationConfig' => $generationConfig
                 ],
                 'timeout' => $timeout,
             ]);
@@ -802,6 +857,78 @@ Questions and Answers:
         }
     }
     
+    /**
+     * Solves a past question's content and returns the answers.
+     */
+    public function solvePastQuestion(string $content)
+    {
+        $prompt = "You are an expert academic assistant. Below is the content of a past examination paper. Your task is to solve all the questions provided in the text. 
+        
+        RULES:
+        1. Provide clear, accurate, and concise answers for every question identified.
+        2. Format your response in a clear, readable Markdown format (e.g., Q1: Answer, Q2: Answer...).
+        3. If there are multiple-choice questions, provide the correct option and a brief explanation if helpful.
+        4. If there are essay questions, provide a comprehensive but concise model answer.
+        5. Return ONLY the Markdown explanation text.
+
+        EXAM CONTENT:
+        \"\"\"{$content}\"\"\"";
+
+        return $this->callGemini($prompt, 60, 8192, 'text/plain');
+    }
+
+    /**
+     * Grades a user's submission for a past question.
+     */
+    public function gradePastQuestionSubmission(string $examContent, array $userAnswers)
+    {
+        $userSubmissionText = "";
+        foreach ($userAnswers as $index => $answer) {
+            $userSubmissionText .= "Question " . ($index + 1) . ": " . $answer . "\n";
+        }
+
+        $prompt = "You are an expert professor grading a student's submission for a past exam. 
+        
+        EXAM CONTENT:
+        \"\"\"{$examContent}\"\"\"
+
+        STUDENT SUBMISSION:
+        \"\"\"{$userSubmissionText}\"\"\"
+
+        TASK:
+        1. Compare the student's answers with the correct solutions based on the exam content.
+        2. Assign a score for each question (e.g., 5/5, 0/10).
+        3. Provide the 'Correct Answer' for any question the student failed or partially failed.
+        4. Calculate an overall score.
+        5. Return your response as a valid JSON object with the following structure:
+           {
+             \"overall_score\": \"85/100\",
+             \"results\": [
+               {
+                 \"question_number\": 1,
+                 \"status\": \"scored\",
+                 \"user_answer\": \"...\",
+                 \"correct_answer\": \"...\",
+                 \"score\": \"5/5\",
+                 \"feedback\": \"...\"
+               },
+               {
+                 \"question_number\": 2,
+                 \"status\": \"fail\",
+                 \"user_answer\": \"...\",
+                 \"correct_answer\": \"...\",
+                 \"score\": \"0/10\",
+                 \"feedback\": \"...\"
+               }
+             ]
+           }
+
+        IMPORTANT: Return ONLY the JSON object.";
+
+        $response = $this->callGemini($prompt, 90, 8192, 'application/json');
+        return json_decode($this->cleanJsonResponse($response), true);
+    }
+
     private function formatConstraints(array $preferences): string
     {
         $constraints = [];
