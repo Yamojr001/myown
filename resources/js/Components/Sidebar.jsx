@@ -79,6 +79,11 @@ export default function Sidebar({ user, showing }) {
                         Settings
                     </SidebarLink>
 
+                    <SidebarLink href={route('reviews.create')} active={isActive('reviews.create')}>
+                        <i className="fas fa-comment-alt w-6 mr-3 text-center"></i>
+                        Feedback
+                    </SidebarLink>
+
                     {/* Admin Link - only shows if user.is_admin is true */}
                     {user.is_admin && (
                         <SidebarLink href={route('admin.dashboard')} active={isActive('admin.dashboard')}>

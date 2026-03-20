@@ -144,7 +144,7 @@ export default function MockExam({ auth, course, questions, testType }) {
                                     {processing ? <><i className="fas fa-spinner fa-spin mr-2"></i> Auto-Grading Essay...</> : <><i className="fas fa-robot mr-2"></i> Submit for AI Grading</>}
                                 </button>
                                 <p className="text-center text-xs text-brand-secondary mt-4">
-                                    <i className="fas fa-bolt text-brand-blue mr-1"></i> Your essays will be evaluated by Gemini 2.5 Flash.
+                                    <i className="fas fa-bolt text-brand-blue mr-1"></i> Your essays will be evaluated by our Advanced AI.
                                 </p>
                             </div>
                         </form>

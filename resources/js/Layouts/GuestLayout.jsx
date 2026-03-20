@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link } from '@inertiajs/react';
+import WhatsAppFloatingButton from '@/Components/WhatsAppFloatingButton';
 
 export default function GuestLayout({ children }) {
     return (
@@ -13,6 +14,8 @@ export default function GuestLayout({ children }) {
             <div className="mt-6 w-full overflow-hidden bg-brand-white px-6 py-8 shadow-xl sm:max-w-md sm:rounded-2xl">
                 {children}
             </div>
+            
+            <WhatsAppFloatingButton />
         </div>
     );
 }

@@ -133,7 +133,7 @@ export default function Dashboard({ auth, stats, recentUsers, recentUploads }) {
                             <h5 className="text-3xl font-black text-white mb-2 tracking-tight uppercase">System Health</h5>
                             <p className="text-blue-200/60 font-medium flex items-center gap-2 justify-center md:justify-start">
                                 <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-                                All services operational - Gemini AI v2.5 Flash Online
+                                All services operational - AI Service Online
                             </p>
                         </div>
                         <div className="flex gap-4">

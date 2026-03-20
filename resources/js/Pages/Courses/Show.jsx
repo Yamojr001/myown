@@ -87,11 +87,58 @@ export default function Show({ auth, course }) {
                             )}
 
                             <div className="bg-brand-white rounded-xl shadow-lg p-6 text-center">
-                                <h3 className="text-xl font-bold text-brand-text mb-4">Next Step</h3>
-                                <p className="text-brand-secondary mb-4">Generate your personalized study plan based on your test results.</p>
-                                <Link href={route('suggestion.show', course.id)} className="block w-full text-center px-6 py-3 bg-brand-blue text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105">
-                                    <i className="fas fa-magic mr-2"></i> Generate AI Study Guide
-                                </Link>
+                                <h3 className="text-xl font-bold text-brand-text mb-4">Reading Architect</h3>
+                                <p className="text-brand-secondary mb-4 text-sm">
+                                    {course.reading_plan 
+                                        ? "Your detailed week-by-week reading plan is ready." 
+                                        : "Generate a detailed, week-by-week reading plan for this course based on its content and your master timetable."}
+                                </p>
+                                <div className="flex flex-col gap-3">
+                                    {course.reading_plan ? (
+                                        <Link 
+                                            href={route('reading-plan.show', course.id)} 
+                                            className="block w-full text-center px-6 py-3 bg-brand-blue text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105"
+                                        >
+                                            <i className="fas fa-book-reader mr-2"></i> View Detailed Plan
+                                        </Link>
+                                    ) : (
+                                        <Link 
+                                            href={route('reading-plan.index')} 
+                                            className="block w-full text-center px-6 py-3 bg-brand-blue text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-transform hover:scale-105"
+                                        >
+                                            <i className="fas fa-book-reader mr-2"></i> Go to Study Architect
+                                        </Link>
+                                    )}
+                                    {!course.reading_plan ? (
+                                        <Link 
+                                            as="button"
+                                            method="post"
+                                            href={route('reading-plan.generate', course.id)}
+                                            className="block w-full text-center px-4 py-2 border-2 border-brand-blue text-brand-blue font-bold rounded-lg hover:bg-brand-blue hover:text-white transition"
+                                        >
+                                            <i className="fas fa-magic mr-2"></i> Generate Detailed Plan
+                                        </Link>
+                                    ) : (
+                                        <Link 
+                                            as="button"
+                                            method="post"
+                                            href={route('reading-plan.generate', course.id)}
+                                            className="block w-full text-center px-4 py-2 border border-gray-200 text-gray-500 text-xs font-semibold rounded-lg hover:bg-gray-50 transition"
+                                        >
+                                            <i className="fas fa-sync-alt mr-2"></i> Regenerate Full Plan
+                                        </Link>
+                                    )}
+
+                                    <div className="pt-4 border-t border-gray-100 mt-2">
+                                        <Link 
+                                            href={route('suggestion.show', course.id)} 
+                                            className="block w-full text-center px-4 py-2 bg-purple-50 text-purple-700 text-sm font-bold rounded-lg hover:bg-purple-100 transition"
+                                        >
+                                            <i className="fas fa-lightbulb mr-2"></i> Personalized Study Guide
+                                        </Link>
+                                        <p className="text-[10px] text-gray-400 mt-1 italic">Based on your weak points from your latest test</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="bg-brand-white rounded-xl shadow-lg">

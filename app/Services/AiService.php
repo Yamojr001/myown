@@ -346,7 +346,7 @@ WEAK TOPICS: [{$weakTopicsList}]";
     /**
      * Generates a semester-long weekly reading plan with test schedule
      */
-    public function generateSemesterSchedule(array $courses, array $preferences, int $semesterWeeks, array $testSchedule = null)
+    public function generateSemesterSchedule(array $courses, array $preferences, int $semesterWeeks, array $testSchedule = null, int $currentWeek = 1)
     {
         try {
             $constraints = $this->formatSemesterConstraints($preferences);
@@ -356,9 +356,8 @@ WEAK TOPICS: [{$weakTopicsList}]";
             
             $courseInfo = "";
             foreach ($prioritizedCourses as $c) {
-                $weakTopics = is_array($c['weak_topics']) ? implode(', ', array_slice($c['weak_topics'], 0, 3)) : 'None';
-                $contentSnippet = substr($c['full_content'] ?? 'No content provided.', 0, 30000); // Excerpt for context
-                $courseInfo .= "### {$c['title']}\n- Score: {$c['score']}%\n- Pages: {$c['page_count']}\n- Key Weak Topics: {$weakTopics}\n- CONTENT EXCERPT: \"\"\"{$contentSnippet}\"\"\"\n\n";
+                $weakTopics = is_array($c['weak_topics'] ?? []) ? implode(', ', array_slice($c['weak_topics'], 0, 3)) : 'None';
+                $courseInfo .= "### {$c['title']} ({$c['code']})\n- Score: {$c['score']}%\n- Bulkiness (Content Length): {$c['bulkiness']} characters\n- Credit Units: {$c['credit_unit']}\n- Key Weak Topics: {$weakTopics}\n\n";
             }
 
             // Add test schedule info
@@ -376,28 +375,27 @@ WEAK TOPICS: [{$weakTopicsList}]";
                 'test_count' => $testSchedule ? count($testSchedule) : 0
             ]);
 
-            $prompt = "You are an expert academic planner. Create a {$semesterWeeks}-week semester study plan.
+            $prompt = "You are an expert academic planner. Create a study plan for a student taking multiple courses for a semester that lasts {$semesterWeeks} weeks total.
+            The student is currently in **Week {$currentWeek}** and wants a plan starting from this week until the end of the semester.
 
-            COURSES (derived from provided content):
+            COURSES & METADATA:
             {$courseInfo}
 
             {$testInfo}
 
             STRICT RULES:
-            1. Create a week-by-week plan for {$semesterWeeks} weeks.
-            2. You MUST STRICTLY use ONLY the information provided in the COURSE CONTENT excerpts above. Do not include external topics or knowledge.
-            3. Prioritize courses with LOWER scores and MORE pages.
-            4. Include focused review weeks before each test.
-            5. Distribute content evenly with realistic weekly study hours.
-            6. For each course per week, provide a 'reading_summary' string (max 25 words) that summarizes what to read based ONLY on the content.
-            7. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above.
-            8. CRITICAL: Return MINIFIED JSON.
-            9. Keep all `topics` and `tasks` string arrays extremely concise. Provide exactly 3 to 4 `tasks` per course.
-            10. Return JSON strictly matching this structure:
-               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"reading_summary\":\"Summary from content\",\"topics\":[\"Topic 1\"],\"pages_to_read\":\"10-25\",\"tasks\":[\"Task 1\"],\"estimated_hours\":2},...],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false}}
-            11. Weekly study hours: {$preferences['study_hours']} hours.
-            12. For test weeks, reduce study hours by 50% and focus on review.
-            13. Constraints: {$constraints}";
+            1. Create a week-by-week plan starting from Week {$currentWeek} up to Week {$semesterWeeks}.
+            2. Prioritize courses with HIGHER credit units, LOWER scores, and HIGHER bulkiness.
+            3. Include focused review weeks before each test.
+            4. Distribute content evenly with realistic weekly study hours: {$preferences['study_hours']} hours.
+            5. For each course per week, set 'reading_summary' to 'TBD' and 'pages_to_read' to 'TBD'. We will generate these later.
+            6. CRITICAL: For EVERY WEEK, the `courses` array MUST contain an object for EVERY SINGLE COURSE listed above.
+            7. CRITICAL: Return MINIFIED JSON.
+            8. Keep all `topics` and `tasks` string arrays extremely concise. Provide exactly 3 to 4 `tasks` per course.
+            9. Return JSON strictly matching this structure:
+               {\"week_1\":{\"courses\":[{\"course\":\"First Course Name\",\"reading_summary\":\"TBD\",\"topics\":[\"Topic 1\"],\"pages_to_read\":\"TBD\",\"tasks\":[\"Task 1\"],\"estimated_hours\":2},...],\"weekly_objectives\":[\"Objective 1\"],\"total_study_hours\":15,\"is_test_week\":false}}
+            10. For test weeks, reduce study hours by 50% and focus on review.
+            11. Constraints: {$constraints}";
 
             $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 60));
             
@@ -430,6 +428,79 @@ WEAK TOPICS: [{$weakTopicsList}]";
             
         } catch (\Exception $e) {
             \Log::error('AI Service Semester Schedule Failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Generates a detailed, week-by-week reading plan for a specific course,
+     * mapped to the user's actual study timetable days.
+     */
+    public function generateDetailedReadingPlan(array $courseData, int $totalWeeks, array $dailyScheduleMap)
+    {
+        try {
+            $content = $courseData['full_content'] ?? '';
+            if (empty($content)) {
+                $content = "Course topics: " . implode(', ', $courseData['topics'] ?? []);
+            }
+
+            $contentExcerpt = substr($content, 0, 150000);
+
+            \Log::info('AI Service: Generating detailed reading plan with daily breakdown', [
+                'course' => $courseData['title'],
+                'weeks' => $totalWeeks,
+                'schedule_weeks' => count($dailyScheduleMap)
+            ]);
+
+            $scheduleContext = "";
+            foreach ($dailyScheduleMap as $weekKey => $days) {
+                $dayList = implode(', ', array_keys($days));
+                $scheduleContext .= "- {$weekKey}: Scheduled on {$dayList}\n";
+            }
+
+            $prompt = "You are an expert academic strategist. Your goal is to create a robust, highly detailed study plan for the following course, STRICTLY following the user's Master Timetable schedule provided below.
+
+            COURSE: {$courseData['title']} ({$courseData['code']})
+            TOTAL DURATION: {$totalWeeks} weeks
+            
+            WEEKLY SCHEDULE (Days the student actually has time for this course):
+            {$scheduleContext}
+
+            CONTENT TO DIVIDE:
+            \"\"\"{$contentExcerpt}\"\"\"
+
+            STRICT RULES:
+            1. Divide the provided course content logically across the scheduled days in each week.
+            2. For each week, provide:
+               - 'summary': A concise overview of the week's goal.
+               - 'daily_segments': An object where keys are the days from the schedule (e.g., 'Monday', 'Wednesday') and values are the specific segments/chapters to read on THAT day.
+               - 'tasks': A list of 2-3 specific action items for the week.
+            3. The plan must ensure the student finishes the entire content by the end of week {$totalWeeks}.
+            4. If a week has no scheduled days for this course, assign a 'General Review' segment to be done whenever possible.
+            5. Return ONLY a valid JSON object.
+            7. Ensure every day mentioned in the WEEKLY SCHEDULE for a given week has a corresponding entry in 'daily_segments'. Do not add any introductory or concluding text.";
+
+            $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 180));
+            
+            if (!$responseContent) {
+                \Log::error('AI Service Detailed Reading Plan: Empty response');
+                return null;
+            }
+
+            $planData = json_decode($responseContent, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                \Log::error('AI Service Detailed Reading Plan: JSON decode error', [
+                    'error' => json_last_error_msg(),
+                    'response' => substr($responseContent, 0, 1000)
+                ]);
+                return null;
+            }
+
+            return $planData;
+
+        } catch (\Exception $e) {
+            \Log::error('AI Service Detailed Reading Plan Failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -708,12 +779,16 @@ WEAK TOPICS: [{$weakTopicsList}]";
     private function prioritizeCourses(array $courses): array
     {
         usort($courses, function($a, $b) {
+            // Higher credit units = higher priority
+            $creditPriority = ($b['credit_unit'] ?? 1) <=> ($a['credit_unit'] ?? 1);
+            if ($creditPriority !== 0) return $creditPriority;
+
             // Lower score = higher priority
             $scorePriority = $a['score'] <=> $b['score'];
             if ($scorePriority !== 0) return $scorePriority;
             
-            // More pages = higher priority
-            return $b['page_count'] <=> $a['page_count'];
+            // More bulkiness = higher priority
+            return ($b['bulkiness'] ?? 0) <=> ($a['bulkiness'] ?? 0);
         });
         
         return $courses;

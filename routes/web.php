@@ -10,6 +10,7 @@ use App\Http\Controllers\MasterTimetableController;
 use App\Http\Controllers\ReadingPlanController; // <-- IMPORT
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\PastQuestionController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -54,6 +55,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');
     Route::post('/courses/{course}/pre-test', [CourseController::class, 'storeTest'])->name('courses.test.store');
+    Route::post('/courses/{course}/retry-analysis', [CourseController::class, 'retryAnalysis'])->name('courses.retry-analysis');
 
     // Advanced Testing Dashboard
     // Use /assessment* paths to avoid conflicts with the project-level /tests directory on some web servers.
@@ -78,6 +80,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Reading Plan Route
     Route::get('/reading-plan', [ReadingPlanController::class, 'index'])->name('reading-plan.index');
+    Route::post('/reading-plan/{course}/generate', [ReadingPlanController::class, 'generate'])->name('reading-plan.generate');
+    Route::get('/reading-plan/{course}/view', [ReadingPlanController::class, 'showDetailed'])->name('reading-plan.show');
+    Route::get('/reading-plan/{course}/download-handout', [ReadingPlanController::class, 'downloadHandout'])->name('reading-plan.download-handout');
 
     // History Route
     Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
@@ -96,6 +101,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/past-questions/{pastQuestion}/ai-solve', [PastQuestionController::class, 'aiSolve'])->name('past-questions.ai-solve');
     Route::post('/past-questions/{pastQuestion}/grade', [PastQuestionController::class, 'grade'])->name('past-questions.grade');
     Route::get('/past-questions/{pastQuestion}/download', [PastQuestionController::class, 'download'])->name('past-questions.download');
+
+    // Review & Suggestion Routes
+    Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 });
 
 // Admin-Only Routes
@@ -110,6 +119,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/settings', [\App\Http\Controllers\Admin\AdminController::class, 'settings'])->name('settings');
     Route::get('/newsletter', [\App\Http\Controllers\Admin\AdminController::class, 'newsletter'])->name('newsletter');
     Route::post('/newsletter/send', [\App\Http\Controllers\Admin\AdminController::class, 'sendNewsletter'])->name('newsletter.send');
+
+    // Admin Review Routes
+    Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('reviews.index');
+    Route::post('/reviews/{review}/read', [\App\Http\Controllers\Admin\ReviewController::class, 'markAsRead'])->name('reviews.read');
+    Route::delete('/reviews/{review}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('reviews.delete');
 });
 
 // Newsletter Unsubscription

@@ -267,4 +267,41 @@ class CourseController extends Controller
 
         return redirect()->route('tests.result.show', ['test' => $test->id]);
     }
+
+    /**
+     * Retry AI analysis for a course syllabus.
+     */
+    public function retryAnalysis(Course $course)
+    {
+        Gate::authorize('update', $course);
+
+        $content = \App\Models\CourseContent::where([
+            'school' => Auth::user()->school,
+            'department' => Auth::user()->department,
+            'course_code' => $course->code,
+        ])->value('content');
+
+        if (!$content) {
+            return back()->with('error', 'Syllabus content not found. Please re-upload the course.');
+        }
+
+        $course->update(['status' => 'Analyzing Syllabus...']);
+
+        try {
+            $aiService = new AiService();
+            $topics = $aiService->extractTopicsFromText($content);
+
+            if ($topics) {
+                $course->update(['topics' => $topics, 'status' => 'Pre-Test Needed']);
+                return back()->with('message', 'AI Analysis successful! You can now take the pre-test.');
+            } else {
+                $course->update(['status' => 'AI Analysis Failed']);
+                return back()->with('error', 'AI Analysis failed again. Please try in a few moments.');
+            }
+        } catch (\Exception $e) {
+            $course->update(['status' => 'AI Analysis Failed']);
+            \Log::error('AI Service Retry Exception: ' . $e->getMessage());
+            return back()->with('error', 'An error occurred during AI analysis. Please try again.');
+        }
+    }
 }

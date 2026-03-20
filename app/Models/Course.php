@@ -5,12 +5,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\CourseContent;
 
 class Course extends Model
 {
     use HasFactory;
-    protected $fillable = [ 'user_id', 'semester_id', 'title', 'code', 'credit_unit', 'file_path', 'page_count', 'topics', 'status', 'progress' ];
-    protected $casts = [ 'topics' => 'array' ];
+    protected $fillable = [ 'user_id', 'semester_id', 'title', 'code', 'credit_unit', 'file_path', 'page_count', 'topics', 'status', 'progress', 'reading_plan' ];
+    protected $casts = [ 'topics' => 'array', 'reading_plan' => 'array' ];
 
     public function semester(): BelongsTo { return $this->belongsTo(Semester::class); }
 

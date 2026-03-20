@@ -29,6 +29,7 @@ class ProfileUpdateRequest extends FormRequest
             'department' => ['nullable', 'string', 'max:255'],
             'level' => ['nullable', 'string', 'max:50'],
             'avatar' => ['nullable', 'image', 'max:2048'], // Max 2MB Image
+            'phone_number' => ['nullable', 'string', 'max:20'],
         ];
     }
 }

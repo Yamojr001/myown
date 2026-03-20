@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import WhatsAppFloatingButton from '@/Components/WhatsAppFloatingButton';
 
 // Reusable Button Component
 const Button = ({ href, children, className }) => (
@@ -36,6 +37,40 @@ const FaqItem = ({ question, answer, isActive, onClick }) => (
     </div>
 );
 
+// Typing Effect Component
+const TypingEffect = ({ words, speed = 150, delay = 2000 }) => {
+    const [index, setIndex] = useState(0);
+    const [subIndex, setSubIndex] = useState(0);
+    const [reverse, setReverse] = useState(false);
+
+    useEffect(() => {
+        if (index === words.length) return;
+
+        if (subIndex === words[index].length + 1 && !reverse) {
+            setTimeout(() => setReverse(true), delay);
+            return;
+        }
+
+        if (subIndex === 0 && reverse) {
+            setReverse(false);
+            setIndex((prev) => (prev + 1) % words.length);
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            setSubIndex((prev) => prev + (reverse ? -1 : 1));
+        }, speed);
+
+        return () => clearTimeout(timeout);
+    }, [subIndex, index, reverse, words, speed, delay]);
+
+    return (
+        <span className="text-brand-blue border-r-4 border-brand-blue animate-pulse">
+            {words[index].substring(0, subIndex)}
+        </span>
+    );
+};
+
 export default function Welcome({ auth }) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,26 +92,31 @@ export default function Welcome({ auth }) {
         { href: '#pricing', label: 'Pricing' },
     ];
 
+    const typingWords = ["Syllabus", "Lecture Notes", "PowerPoints", "Textbooks", "Exam Goals"];
+
     return (
         <>
             <Head title="Welcome" />
-            <div className="bg-brand-white text-brand-text">
+            <div className="bg-brand-white text-brand-text font-inter">
                 {/* Header */}
-                <header className={`fixed top-0 left-0 w-full z-50 transition-shadow duration-300 ${isScrolled ? 'shadow-lg bg-white/80 backdrop-blur-lg' : 'bg-transparent'}`}>
+                <header className="fixed top-0 left-0 w-full z-50 transition-shadow duration-300 shadow-md bg-white">
                     <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
                         <Link href="/" className="text-2xl font-bold text-brand-dark flex items-center gap-2">
                             <i className="fas fa-brain text-brand-blue"></i> Phronix AI
                         </Link>
                         <div className="hidden md:flex items-center gap-8">
-                            {navLinks.map(link => <a key={link.href} href={link.href} className="font-semibold hover:text-brand-blue transition-colors">{link.label}</a>)}
+                            {navLinks.map(link => <a key={link.href} href={link.href} className="font-semibold text-brand-dark hover:text-brand-blue transition-colors">{link.label}</a>)}
                         </div>
                         <div className="hidden md:flex items-center gap-4">
+                            <a href="https://whatsapp.com/channel/0029Vb7jHBj8F2pE6Vzb961R" target="_blank" className="font-bold text-brand-blue hover:text-blue-700 flex items-center gap-2 mr-4 text-sm">
+                                <i className="fab fa-whatsapp"></i> Join Channel
+                            </a>
                             {auth.user ? (
-                                <Button href={route('dashboard')} className="bg-brand-blue text-white hover:shadow-lg">Dashboard</Button>
+                                <Button href={route('dashboard')} className="bg-brand-blue text-white hover:shadow-lg text-sm px-6">Dashboard</Button>
                             ) : (
                                 <>
-                                    <Button href={route('login')} className="bg-transparent text-brand-dark hover:bg-gray-100">Login</Button>
-                                    <Button href={route('register')} className="bg-brand-blue text-white hover:shadow-lg">Get Started</Button>
+                                    <Button href={route('login')} className="bg-transparent text-brand-dark hover:bg-gray-100 text-sm px-6">Login</Button>
+                                    <Button href={route('register')} className="bg-brand-blue text-white hover:shadow-lg text-sm px-6">Get Started</Button>
                                 </>
                             )}
                         </div>
@@ -87,12 +127,18 @@ export default function Welcome({ auth }) {
                 </header>
 
                 {/* Mobile Menu */}
-                <div className={`fixed top-0 left-0 w-full h-full bg-white z-40 p-6 transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                    <div className="flex justify-end mb-8">
+                <div className={`fixed top-0 left-0 w-full h-full bg-white z-[60] p-6 transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                    <div className="flex justify-between items-center mb-8">
+                        <Link href="/" className="text-xl font-bold text-brand-dark flex items-center gap-2">
+                            <i className="fas fa-brain text-brand-blue"></i> Phronix AI
+                        </Link>
                         <button className="text-2xl" onClick={() => setIsMobileMenuOpen(false)}><i className="fas fa-times"></i></button>
                     </div>
                     <div className="flex flex-col items-center gap-6">
                         {navLinks.map(link => <a key={link.href} href={link.href} onClick={() => setIsMobileMenuOpen(false)} className="font-semibold text-xl">{link.label}</a>)}
+                        <a href="https://whatsapp.com/channel/0029Vb7jHBj8F2pE6Vzb961R" target="_blank" className="font-bold text-brand-blue text-xl flex items-center gap-2">
+                            <i className="fab fa-whatsapp text-2xl"></i> Join WhatsApp Channel
+                        </a>
                         <hr className="w-full my-4" />
                         {auth.user ? (
                             <Button href={route('dashboard')} className="bg-brand-blue text-white w-full text-center justify-center">Dashboard</Button>
@@ -106,20 +152,89 @@ export default function Welcome({ auth }) {
                 </div>
 
                 {/* Hero Section */}
-                <section className="relative pt-32 pb-24 overflow-hidden bg-brand-dark">
+                <section className="relative pt-48 pb-24 overflow-hidden bg-white">
                     {/* Background decorations */}
                     <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-                        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[70%] rounded-full bg-brand-blue/20 blur-[120px]"></div>
-                        <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[60%] rounded-full bg-brand-blue/20 blur-[100px]"></div>
+                        <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[70%] rounded-full bg-brand-blue/10 blur-[120px]"></div>
+                        <div className="absolute bottom-[-20%] left-[-10%] w-[40%] h-[60%] rounded-full bg-brand-blue/10 blur-[100px]"></div>
                     </div>
 
                     <div className="container mx-auto px-6 text-center relative z-10">
-                        <span className="inline-block bg-brand-blue/20 text-brand-blue border border-brand-blue/30 px-5 py-2 rounded-full font-bold text-sm mb-6 tracking-wide shadow-lg">🚀 The Ultimate AI-Powered Study Architect</span>
-                        <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-tight">Master Your Syllabus with <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-blue to-cyan-400">Phronix AI</span></h1>
-                        <p className="max-w-3xl mx-auto text-xl text-gray-300 mb-10 font-light leading-relaxed">Upload any course material and let our AI generate a perfectly optimized reading plan, diagnostic tests, and an adaptive weekly timetable tailored to your weak spots.</p>
-                        <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-                            <Button href={route('register')} className="bg-brand-blue text-white hover:bg-blue-700 shadow-xl shadow-brand-blue/30 w-full sm:w-auto text-lg">Start for Free Today <i className="fas fa-arrow-right ml-2"></i></Button>
-                            <Button href="#pricing" className="bg-white/10 text-white hover:bg-white/20 backdrop-blur-md w-full sm:w-auto text-lg border border-white/20">View Pricing Plans</Button>
+                        <span className="inline-block bg-brand-blue/10 text-brand-blue border border-brand-blue/20 px-5 py-2 rounded-full font-bold text-xs mb-8 tracking-widest shadow-sm uppercase">🚀 The Ultimate AI-Powered Study Architect</span>
+                        <h1 className="text-5xl md:text-8xl font-black text-brand-dark mb-8 leading-tight tracking-tighter">
+                            Master Your <br />
+                            <TypingEffect words={typingWords} />
+                        </h1>
+                        <p className="max-w-3xl mx-auto text-xl text-brand-secondary mb-12 font-medium leading-relaxed">
+                            Upload any course material and let our AI generate a perfectly optimized reading plan, diagnostic tests, and an adaptive weekly timetable tailored to your academic excellence.
+                        </p>
+                        <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
+                            <Button href={route('register')} className="bg-brand-blue text-white hover:bg-blue-700 shadow-2xl shadow-brand-blue/30 w-full sm:w-auto text-lg px-12 py-5 scale-105 active:scale-95">Start for Free Today <i className="fas fa-arrow-right ml-2 animate-bounce-x"></i></Button>
+                            <a href="https://whatsapp.com/channel/0029Vb7jHBj8F2pE6Vzb961R" target="_blank" className="bg-green-500 text-white hover:bg-green-600 px-8 py-5 rounded-2xl font-bold shadow-xl shadow-green-500/20 w-full sm:w-auto text-lg flex items-center justify-center gap-3 active:scale-95 transition-transform">
+                                <i className="fab fa-whatsapp text-2xl"></i> Join Channel
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                {/* AI Spotlight Section */}
+                <section className="py-24 bg-brand-dark relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20">
+                         <div className="absolute top-10 left-1/4 w-96 h-96 bg-brand-blue rounded-full blur-[100px]"></div>
+                    </div>
+                    
+                    <div className="container mx-auto px-6 relative z-10">
+                        <div className="flex flex-col lg:flex-row items-center gap-16">
+                            <div className="lg:w-1/2">
+                                <div className="inline-flex items-center gap-2 bg-brand-blue/20 text-brand-blue px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest mb-6 border border-brand-blue/30">
+                                    <i className="fas fa-bolt"></i> Powered by Phronix AI
+                                </div>
+                                <h2 className="text-4xl md:text-5xl font-black text-white mb-6 leading-tight">Your Personal <span className="text-brand-blue">AI Scholar</span> that Never Sleeps</h2>
+                                <p className="text-xl text-gray-400 mb-8 leading-relaxed font-medium">
+                                    Gone are the days of manual scheduling. Phronix AI leverages cutting-edge LLM technology to "understand" your notes. It parses topics, determines bulkiness, and calculates exactly how many hours you need to study to hit an A.
+                                </p>
+                                <ul className="space-y-4 mb-10">
+                                    <li className="flex items-center gap-4 text-white font-bold">
+                                        <div className="w-8 h-8 rounded-lg bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+                                            <i className="fas fa-check"></i>
+                                        </div>
+                                        Instant Syllabus Decomposition
+                                    </li>
+                                    <li className="flex items-center gap-4 text-white font-bold">
+                                        <div className="w-8 h-8 rounded-lg bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+                                            <i className="fas fa-check"></i>
+                                        </div>
+                                        Weak-Spot Identification via Pre-Tests
+                                    </li>
+                                    <li className="flex items-center gap-4 text-white font-bold">
+                                        <div className="w-8 h-8 rounded-lg bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+                                            <i className="fas fa-check"></i>
+                                        </div>
+                                        Dynamic Time Allocation based on Credits
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="lg:w-1/2 relative">
+                                <div className="bg-gradient-to-br from-brand-blue to-blue-800 p-1 rounded-3xl shadow-2xl relative overflow-hidden group">
+                                    <div className="bg-brand-dark rounded-[22px] overflow-hidden p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
+                                        <div className="relative mb-8">
+                                            <div className="w-32 h-32 rounded-full bg-brand-blue flex items-center justify-center text-white text-5xl animate-pulse">
+                                                <i className="fas fa-robot"></i>
+                                            </div>
+                                            <div className="absolute -top-2 -right-2 bg-green-500 w-8 h-8 rounded-full border-4 border-brand-dark flex items-center justify-center">
+                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                            </div>
+                                        </div>
+                                        <h4 className="text-2xl font-black text-white uppercase tracking-tighter">AI Analysis System</h4>
+                                        <div className="mt-6 w-full max-w-xs bg-gray-800 rounded-xl p-4 flex flex-col gap-3">
+                                            <div className="h-2 bg-brand-blue rounded-full w-[85%]"></div>
+                                            <div className="h-2 bg-brand-blue/30 rounded-full w-[60%]"></div>
+                                            <div className="h-2 bg-brand-blue/50 rounded-full w-[40%]"></div>
+                                        </div>
+                                        <p className="mt-8 text-brand-blue font-bold italic">Processing Syllabus Materials...</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -129,16 +244,13 @@ export default function Welcome({ auth }) {
                     <div className="container mx-auto px-6">
                         <div className="text-center max-w-4xl mx-auto mb-16">
                             <h2 className="text-4xl md:text-5xl font-black text-brand-dark">Everything You Need to <span className="text-brand-blue">Excel</span></h2>
-                            <p className="text-xl text-brand-secondary mt-6 font-medium">Powered by ultra-fast Gemini 2.5 AI that reads your syllabus and builds an actionable, week-by-week success plan.</p>
+                            <p className="text-xl text-brand-secondary mt-6 font-medium">Powered by ultra-fast Advanced AI that reads your syllabus and builds an actionable, week-by-week success plan.</p>
                         </div>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            <FeatureCard icon="fa-book" title="AI Reading Plans" text="Upload your PDFs to instantly generate beautiful, week-by-week reading checklists and summaries." freeText="Free Tier Included" />
-                            <FeatureCard icon="fa-layer-group" title="5 Course Limit" text="Start your semester strong by organizing up to 5 complete courses totally for free." freeText="Free Tier Included" />
-                            <FeatureCard icon="fa-microscope" title="Text-Only Extraction" text="Upload standard Text, PPT, and Word files and our algorithm will instantly parse your topics." freeText="Free Tier Included" />
-
-                            {/* Pro Features */}
-                            <FeatureCard icon="fa-robot" title="AI Image & PPT Vision" text="Upload complex PowerPoints, Images, and scanned PDFs. Our Gemini Vision AI will accurately read them." pro />
-                            <FeatureCard icon="fa-calendar-day" title="Adaptive Timetables" text="Generate a Master Grid Schedule that automatically prioritizes courses you score low in and re-balances hours." pro />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <FeatureCard icon="fa-clock" title="Adaptive Timetabling" text="AI-generated reading schedules that sync with your personal life. Never miss a study session again." />
+                            <FeatureCard icon="fa-robot" title="AI Image & PPT Vision" text="Upload complex PowerPoints, Images, and scanned PDFs. Our Advanced Vision AI will accurately read them." pro />
+                            <FeatureCard icon="fa-bullseye" title="Diagnostic Testing" text="Take quick tests to identify what you actually know vs. what you need to study. No more passive reading." />
+                            <FeatureCard icon="fa-chart-line" title="Progress Analytics" text="Watch your mastery grow with beautiful visualizations of your learning journey." />
                             <FeatureCard icon="fa-infinity" title="Unlimited Courses" text="Never worry about caps. Manage your entire degree program across all semesters simultaneously." pro />
                             <FeatureCard icon="fa-chart-pie" title="Pre-Tests & Analytics" text="Take auto-generated diagnostic tests before reading to let the AI pinpoint exactly what topics you need to focus on." pro />
                             <FeatureCard icon="fa-volume-up" title="Read Aloud Audio" text="Tired of reading? Hit play and let our seamless narrator read your course plans to you loop-by-loop." pro />
@@ -179,42 +291,59 @@ export default function Welcome({ auth }) {
                         <h2 className="text-4xl md:text-5xl font-black text-white">Upgrade to Limitless Learning</h2>
                         <p className="text-xl text-blue-100 mt-6 mb-12 max-w-2xl mx-auto font-medium">Join thousands of students who are already achieving top decile grades with the full power of Phronix AI Adaptive Timetables and Vision Analysis.</p>
 
-                        <div className="flex flex-col md:flex-row justify-center w-full max-w-5xl mx-auto gap-8 text-left">
-
+                        <div className="flex flex-col md:flex-row justify-center w-full max-w-6xl mx-auto gap-8 text-left">
                             {/* Free Tier */}
-                            <div className="flex-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-10 shadow-2xl transition-transform hover:-translate-y-2">
-                                <h3 className="text-3xl font-bold text-white mb-2">Basic Plan</h3>
-                                <p className="text-blue-200 mb-6 text-lg">Perfect to get started</p>
-                                <div className="text-5xl font-black text-white mb-8">$0<span className="text-xl font-normal text-blue-200">/forever</span></div>
-                                <ul className="space-y-4 mb-10 text-white">
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Up to 5 Courses</li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Standard Text/PDF Extraction</li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> AI Reading Summaries</li>
-                                    <li className="flex items-center gap-3 opacity-50"><i className="fas fa-times text-red-400"></i> <strike>No AI Timetable Generation</strike></li>
-                                    <li className="flex items-center gap-3 opacity-50"><i className="fas fa-times text-red-400"></i> <strike>No Image/PPT AI Vision</strike></li>
+                            <div className="flex-1 bg-white/5 backdrop-blur-sm border border-white/10 rounded-3xl p-8 shadow-xl transition-transform hover:-translate-y-1">
+                                <h3 className="text-2xl font-bold text-white mb-2">Free Plan</h3>
+                                <p className="text-blue-200 mb-6 text-sm">Explore Phronix AI</p>
+                                <div className="text-4xl font-black text-white mb-8">N0<span className="text-lg font-normal text-blue-300">/forever</span></div>
+                                <ul className="space-y-4 mb-10 text-white/90 text-sm">
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Diagnostic Testing (1 Course)</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Basic Study Recommendations</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Manual Timetable Manager</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Access to Community Channel</li>
                                 </ul>
-                                <Button href={route('register')} className="w-full bg-white text-brand-blue hover:bg-gray-100 shadow-lg text-center justify-center">Sign Up Free</Button>
+                                <Button href={route('register')} className="w-full bg-white/10 text-white border border-white/20 hover:bg-white/20 text-center justify-center">Get Started</Button>
                             </div>
 
-                            {/* Pro Tier */}
-                            <div className="flex-1 bg-white rounded-3xl p-10 shadow-2xl scale-105 border-4 border-brand-blue relative transition-transform hover:-translate-y-2">
-                                <div className="absolute top-0 right-10 transform -translate-y-1/2 bg-brand-blue text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg uppercase tracking-wide">Most Popular</div>
-                                <h3 className="text-3xl font-bold text-brand-dark mb-2">Pro Scholar</h3>
-                                <p className="text-brand-secondary mb-6 text-lg">Everything you need to master exams</p>
-                                <div className="text-5xl font-black text-brand-dark mb-8">$9<span className="text-xl font-normal text-brand-secondary">/mo</span></div>
-                                <ul className="space-y-4 mb-10 text-brand-dark font-medium">
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> <b>Unlimited</b> Courses</li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> <b>Gemini Vision</b> Image & PPT Parse</li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> <b>Adaptive Timetable Generation</b></li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> <b>Diagnostic Pre-Testing</b></li>
-                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> PDF Export & Read Aloud Audio</li>
+                            {/* Semester Tier */}
+                            <div className="flex-1 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl transition-transform hover:-translate-y-2">
+                                <h3 className="text-2xl font-bold text-white mb-2">Semester Pro</h3>
+                                <p className="text-blue-200 mb-6 text-sm">Perfect for one semester</p>
+                                <div className="text-4xl font-black text-white mb-8">N3,000<span className="text-lg font-normal text-blue-300">/6 mo</span></div>
+                                <ul className="space-y-4 mb-10 text-white text-sm">
+                                    <li className="flex items-center gap-3 font-bold text-[10px] uppercase tracking-wider text-blue-300 border-b border-white/10 pb-2">Everything in Free +</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Unlimited Courses & Architect</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Advanced Vision AI Parse</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Detailed Daily Study Plan</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Smart AI Tutor (24/7 Chat)</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Read Aloud AI Narrator</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-green-400"></i> Offline PDF Handouts</li>
                                 </ul>
-                                <Button href={route('register')} className="w-full bg-brand-blue text-white hover:bg-blue-700 shadow-xl shadow-brand-blue/30 text-center justify-center">Start Pro Trial</Button>
+                                <Button href={route('register')} className="w-full bg-white text-brand-blue hover:bg-gray-100 shadow-lg text-center justify-center">Go Semester Pro</Button>
+                            </div>
+
+                            {/* Yearly Tier */}
+                            <div className="flex-1 bg-white rounded-3xl p-8 shadow-2xl border-4 border-brand-blue relative transition-transform hover:-translate-y-2">
+                                <div className="absolute top-0 right-8 transform -translate-y-1/2 bg-brand-blue text-white px-3 py-1 rounded-full text-[10px] font-bold shadow-lg uppercase tracking-wide">Best Value</div>
+                                <h3 className="text-2xl font-bold text-brand-dark mb-2">Yearly Pro</h3>
+                                <p className="text-brand-secondary mb-6 text-sm">Maximum success strategy</p>
+                                <div className="text-4xl font-black text-brand-dark mb-8">N5,000<span className="text-lg font-normal text-brand-secondary">/year</span></div>
+                                <ul className="space-y-4 mb-10 text-brand-dark text-sm font-medium">
+                                    <li className="flex items-center gap-3 font-bold text-[10px] uppercase tracking-wider text-brand-blue border-b border-gray-100 pb-2">Everything in Semester +</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> Personalized Email Reminders</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> Priority AI Processing</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> Early Access to Mock Exams</li>
+                                    <li className="flex items-center gap-3"><i className="fas fa-check text-brand-blue"></i> 24/7 Priority VIP Support</li>
+                                </ul>
+                                <Button href={route('register')} className="w-full bg-brand-blue text-white hover:bg-blue-700 shadow-lg text-center justify-center">Get Annual Pro</Button>
                             </div>
 
                         </div>
                     </div>
                 </section>
+
+                <WhatsAppFloatingButton />
 
                 {/* Footer */}
                 <footer className="bg-brand-dark text-brand-secondary pt-20">

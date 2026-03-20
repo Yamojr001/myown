@@ -131,7 +131,7 @@ export default function Index({ auth, courses }) {
                                             )}
                                         </button>
                                         <p className="text-center text-xs text-brand-secondary mt-3">
-                                            <i className="fas fa-bolt text-yellow-400 mr-1"></i> Powered by Gemini 2.5 Flash
+                                            <i className="fas fa-bolt text-yellow-400 mr-1"></i> Powered by Advanced AI
                                         </p>
                                     </div>
                                 </form>

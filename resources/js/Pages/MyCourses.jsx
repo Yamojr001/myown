@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import Modal from '@/Components/Modal';
 import TextInput from '@/Components/TextInput';
@@ -112,7 +112,14 @@ export default function MyCourses({ auth, courses, flash }) {
             case 'Pre-Test Needed':
                 return <Link href={route('courses.test.show', course.id)} className="w-full text-center px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-opacity-80 font-semibold">Take Pre-Test</Link>;
             case 'AI Analysis Failed':
-                return <Link href={'#'} className="w-full text-center px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-opacity-80 font-semibold">Retry Analysis</Link>;
+                return (
+                    <button 
+                        onClick={() => router.post(route('courses.retry-analysis', course.id))}
+                        className="w-full text-center px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-opacity-80 font-semibold transition"
+                    >
+                        <i className="fas fa-sync-alt mr-2"></i>Retry Analysis
+                    </button>
+                );
             case 'Analyzing Syllabus...':
                 return <button disabled className="w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Analyzing...</button>;
             default:

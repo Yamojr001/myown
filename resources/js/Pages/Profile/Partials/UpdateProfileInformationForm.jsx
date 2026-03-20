@@ -24,6 +24,7 @@ export default function UpdateProfileInformation({
             school: user.school || '',
             department: user.department || '',
             level: user.level || '',
+            phone_number: user.phone_number || '',
             avatar: null,
             _method: 'patch', // Override method for Laravel to handle file uploads properly
         });
@@ -160,6 +161,21 @@ export default function UpdateProfileInformation({
                             placeholder="e.g. Year 2 / 200L"
                         />
                         <InputError className="mt-2" message={errors.level} />
+                    </div>
+
+                    {/* Phone Number */}
+                    <div>
+                        <InputLabel htmlFor="phone_number" value="Phone Number" />
+                        <TextInput
+                            id="phone_number"
+                            type="tel"
+                            className="mt-1 block w-full bg-gray-50 border-gray-200 focus:bg-white"
+                            value={data.phone_number}
+                            onChange={(e) => setData('phone_number', e.target.value)}
+                            placeholder="e.g. +234 123 456 7890"
+                            autoComplete="tel"
+                        />
+                        <InputError className="mt-2" message={errors.phone_number} />
                     </div>
                 </div>
 

@@ -9,6 +9,7 @@ export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
+        phone_number: '',
         password: '',
         password_confirmation: '',
         terms: false,
@@ -59,6 +60,22 @@ export default function Register() {
                     />
 
                     <InputError message={errors.email} className="mt-2" />
+                </div>
+ 
+                <div className="mt-4">
+                    <InputLabel htmlFor="phone_number" value="Phone Number (WhatsApp preferred)" />
+ 
+                    <TextInput
+                        id="phone_number"
+                        type="tel"
+                        name="phone_number"
+                        value={data.phone_number}
+                        className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-brand-blue focus:ring focus:ring-brand-blue/20"
+                        autoComplete="tel"
+                        onChange={(e) => setData('phone_number', e.target.value)}
+                    />
+ 
+                    <InputError message={errors.phone_number} className="mt-2" />
                 </div>
 
                 <div className="mt-4">

@@ -12,6 +12,7 @@ export default function Show({ auth, coursesData, allTestsTaken, timetable, curr
         preferred_time: 'evening',
         study_hours: 15,
         semester_duration_weeks: 15,
+        semester_current_week: 1,
         semester_start_date: new Date().toISOString().split('T')[0],
         has_custom_schedule: false,
         custom_schedules: [],
@@ -290,8 +291,9 @@ export default function Show({ auth, coursesData, allTestsTaken, timetable, curr
                             <div className="p-4 md:p-6 overflow-x-auto">
                                 <h4 className="font-bold text-brand-text mb-4 text-xl">Daily Schedule Grid</h4>
 
-                                <div className="min-w-[800px] border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-                                    <table className="w-full text-left border-collapse">
+                                <div className="inline-block min-w-full align-middle">
+                                    <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                                        <table className="min-w-[1000px] w-full text-left border-collapse table-fixed">
                                         <thead>
                                             <tr className="bg-brand-blue text-white">
                                                 <th className="p-3 border-r border-brand-blue/20 w-32 font-semibold">Time</th>
@@ -391,7 +393,8 @@ export default function Show({ auth, coursesData, allTestsTaken, timetable, curr
                                             }
                                             return null;
                                         })()}
-                                    </table>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -474,6 +477,25 @@ export default function Show({ auth, coursesData, allTestsTaken, timetable, curr
                                             Note: System will schedule 3 progress tests and 1 mock exam based on duration
                                         </p>
                                         <InputError message={errors.semester_duration_weeks} className="mt-2" />
+                                    </div>
+
+                                    {/* Current Week */}
+                                    <div>
+                                        <label className="font-semibold text-brand-text text-sm">
+                                            Current Semester Week
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={data.semester_duration_weeks}
+                                            value={data.semester_current_week}
+                                            onChange={e => setData("semester_current_week", e.target.value)}
+                                            className="mt-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand-blue focus:ring-brand-blue"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            The week you want to start reading from
+                                        </p>
+                                        <InputError message={errors.semester_current_week} className="mt-2" />
                                     </div>
 
                                     {/* Semester Start Date */}

@@ -9,7 +9,6 @@ use App\Services\AiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Smalot\PdfParser\Parser;
 use Carbon\Carbon;
 
 class MasterTimetableController extends Controller
@@ -23,31 +22,25 @@ class MasterTimetableController extends Controller
         $coursesData = [];
         $allTestsTaken = $courses->isNotEmpty();
 
-        $parser = new Parser();
-
         foreach ($courses as $course) {
             $latestTest = $course->tests()->latest()->first();
             if (!$latestTest) {
                 $allTestsTaken = false;
             }
 
-            $pageCount = 0;
-            try {
-                $filePath = storage_path('app/public/' . $course->file_path);
-                if (file_exists($filePath)) {
-                    $pdf = $parser->parseFile($filePath);
-                    $pageCount = count($pdf->getPages());
-                }
-            } catch (\Exception $e) {
-                \Log::warning("Could not parse PDF for page count for course ID: {$course->id}");
-            }
+            $fullContent = $course->full_content;
+            $bulkiness = $fullContent ? strlen($fullContent) : 0;
+            
+            // For display, we can estimate "pages" as length / 2500 (approx chars per page for reading)
+            $estimatedPages = ceil($bulkiness / 2500);
 
             $coursesData[] = [
                 'id' => $course->id,
                 'title' => $course->title,
                 'code' => $course->code,
                 'latest_score' => $latestTest ? $latestTest->score : null,
-                'page_count' => $pageCount,
+                'page_count' => $estimatedPages,
+                'bulkiness' => $bulkiness,
                 'has_initial_test' => $course->tests()->exists(),
             ];
         }
@@ -91,6 +84,7 @@ class MasterTimetableController extends Controller
             'preferred_time' => ['required', 'string'],
             'study_hours' => ['required', 'integer', 'min:1', 'max:50'],
             'semester_duration_weeks' => ['required', 'integer', 'min:8', 'max:52'],
+            'semester_current_week' => ['required', 'integer', 'min:1', 'max:52'],
             'semester_start_date' => ['required', 'date'],
             'has_custom_schedule' => ['required', 'boolean'],
             'custom_schedules' => ['nullable', 'array'],
@@ -98,30 +92,22 @@ class MasterTimetableController extends Controller
 
         $user = Auth::user();
         $courses = $user->courses()->where('semester_id', $user->current_semester_id)->with('tests')->get();
-        $parser = new Parser();
         $coursesForAI = [];
 
         foreach ($courses as $course) {
-            $latestTest = $course->tests()->latest()->first();
+            $fullContent = $course->full_content;
+            $bulkiness = $fullContent ? strlen($fullContent) : 0;
+            $avgScore = $course->tests()->exists() ? round($course->tests()->avg('score')) : 50;
             
-            $pageCount = 0;
-            try {
-                if ($course->file_path) {
-                    $filePath = storage_path('app/public/' . $course->file_path);
-                    if (file_exists($filePath)) {
-                        $pdf = $parser->parseFile($filePath);
-                        $pageCount = count($pdf->getPages());
-                    }
-                }
-            } catch (\Exception $e) { }
-
             $coursesForAI[] = [
                 'id' => $course->id,
                 'title' => $course->title,
-                'score' => $latestTest ? $latestTest->score : 50,
-                'page_count' => $pageCount > 0 ? $pageCount : 100, // Fallback priority if no physical PDF exists
-                'weak_topics' => $latestTest && $latestTest->weak_topics ? $latestTest->weak_topics : [],
-                'full_content' => $course->full_content,
+                'code' => $course->code,
+                'score' => $avgScore,
+                'credit_unit' => $course->credit_unit ?? 1,
+                'bulkiness' => $bulkiness,
+                'weak_topics' => $course->tests()->latest()->value('weak_topics') ?? [],
+                'full_content' => $fullContent,
             ];
         }
 
@@ -137,18 +123,19 @@ class MasterTimetableController extends Controller
             $coursesForAI, 
             $preferences,
             $preferences['semester_duration_weeks'],
-            $testSchedule
+            $testSchedule,
+            (int)$preferences['semester_current_week']
         );
 
         if (!$weeklySchedule) {
             return back()->with('error', 'The AI failed to generate a timetable at this time. Please try again.');
         }
 
-        // Generate weekly timetable for current week
+        // Generate weekly timetable for the specified current week
         $currentWeekSchedule = $aiService->generateWeeklyTimetableFromSemesterSchedule(
             $weeklySchedule,
             $preferences,
-            1
+            (int)$preferences['semester_current_week']
         );
 
         MasterTimetable::updateOrCreate(
@@ -158,10 +145,10 @@ class MasterTimetableController extends Controller
                 'weekly_schedule' => $weeklySchedule,
                 'semester_duration_weeks' => $preferences['semester_duration_weeks'],
                 'semester_start_date' => $preferences['semester_start_date'],
-                'current_week' => 1,
+                'current_week' => (int)$preferences['semester_current_week'],
                 'test_schedule' => $testSchedule,
                 'preferences' => $preferences,
-                'next_test_week' => $testSchedule[0]['week'],
+                'next_test_week' => collect($testSchedule)->first(fn($t) => $t['week'] >= (int)$preferences['semester_current_week'])['week'] ?? ($testSchedule[0]['week'] ?? 1),
             ]
         );
 

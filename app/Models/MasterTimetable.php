@@ -32,7 +32,7 @@ class MasterTimetable extends Model
         'semester_start_date' => 'date',
     ];
 
-    protected $appends = ['current_week', 'next_test_info'];
+    protected $appends = ['current_week', 'next_test_info', 'min_schedule_week'];
 
     public function user(): BelongsTo
     {
@@ -50,19 +50,48 @@ class MasterTimetable extends Model
     public function getCurrentWeekAttribute()
     {
         if (!$this->semester_start_date || !$this->semester_duration_weeks) {
-            return 1;
+            return $this->min_schedule_week ?? 1;
         }
 
         $startDate = Carbon::parse($this->semester_start_date);
         $today = Carbon::today();
         
         if ($today->lt($startDate)) {
-            return 1;
+            return $this->min_schedule_week ?? 1;
         }
         
-        $weekNumber = $startDate->diffInWeeks($today) + 1;
-        
-        return min($weekNumber, $this->semester_duration_weeks);
+        $weekNumber = (int) ($startDate->diffInWeeks($today) + 1);
+        $weekNumber = min($weekNumber, $this->semester_duration_weeks);
+
+        // Clamp to the minimum week that actually exists in the stored schedule
+        $minWeek = $this->min_schedule_week;
+        if ($minWeek && $weekNumber < $minWeek) {
+            return $minWeek;
+        }
+
+        return $weekNumber;
+    }
+
+    /**
+     * Get the minimum week number that exists in the stored weekly_schedule.
+     * The AI generates the plan from the user's specified start week, so
+     * earlier week keys (e.g. week_1, week_2) may not exist.
+     */
+    public function getMinScheduleWeekAttribute(): ?int
+    {
+        $schedule = $this->weekly_schedule;
+        if (empty($schedule)) {
+            return null;
+        }
+
+        $weeks = array_filter(array_map(function ($key) {
+            if (preg_match('/^week_(\d+)$/', $key, $m)) {
+                return (int) $m[1];
+            }
+            return null;
+        }, array_keys($schedule)));
+
+        return empty($weeks) ? null : min($weeks);
     }
 
     /**

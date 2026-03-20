@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Sidebar from '@/Components/Sidebar';
 import { Link, usePage } from '@inertiajs/react';
+import WhatsAppFloatingButton from '@/Components/WhatsAppFloatingButton';
 
 export default function Authenticated({ user, children }) {
     const { active_alerts, test_alert } = usePage().props;
@@ -121,7 +122,10 @@ export default function Authenticated({ user, children }) {
                 )}
 
                 {/* This is where the content of each individual page (like the dashboard) will be rendered */}
-                <main>{children}</main>
+                <main className="relative">
+                    {children}
+                    <WhatsAppFloatingButton />
+                </main>
 
             </div>
         </div>

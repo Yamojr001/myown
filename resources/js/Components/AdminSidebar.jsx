@@ -67,6 +67,11 @@ export default function AdminSidebar({ user, showing }) {
                         Newsletter Broadcast
                     </AdminSidebarLink>
 
+                    <AdminSidebarLink href={route('admin.reviews.index')} active={isActive('admin.reviews.index')}>
+                        <i className="fas fa-comment-alt w-6 mr-3 text-center opacity-70"></i>
+                        User Feedback
+                    </AdminSidebarLink>
+
                     <AdminSidebarLink href={route('admin.logs')} active={isActive('admin.logs')}>
                         <i className="fas fa-terminal w-6 mr-3 text-center opacity-70"></i>
                         Activity Logs
