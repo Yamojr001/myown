@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +24,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        RateLimiter::for('ai-heavy', function (Request $request) {
+            $id = $request->user()?->id ?: $request->ip();
+
+            return [
+                Limit::perMinute(20)->by('ai-heavy:' . $id),
+                Limit::perHour(200)->by('ai-heavy-hour:' . $id),
+            ];
+        });
 
         // Listen for Login Events
         \Illuminate\Support\Facades\Event::listen(

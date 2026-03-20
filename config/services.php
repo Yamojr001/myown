@@ -41,6 +41,8 @@ return [
     // ===============================================
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+        'daily_request_limit' => (int) env('GEMINI_DAILY_REQUEST_LIMIT', 500),
+        'fallback_model' => env('GEMINI_FALLBACK_MODEL', 'gemini-2.5-pro'),
     ],
 
 ];

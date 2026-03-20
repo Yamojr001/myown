@@ -55,7 +55,10 @@ class ReadingPlanController extends Controller
         // Fetch the specific week data
         $weeklySchedule = $storedSchedule['week_' . $week] ?? null;
 
-        $courses = $user->courses()->where('semester_id', $user->current_semester_id)->get();
+        $courses = $user->courses()->where('semester_id', $user->current_semester_id)->get()->map(function ($course) {
+            $course->reading_plan = $this->normalizeReadingPlan($course->reading_plan);
+            return $course;
+        });
 
         return Inertia::render('ReadingPlan/Index', [
             'weeklySchedule' => $weeklySchedule,
@@ -115,8 +118,13 @@ class ReadingPlanController extends Controller
             return back()->with('error', 'Failed to generate detailed reading plan. Please try again.');
         }
 
+        $normalizedPlan = $this->normalizeReadingPlan($detailedPlan);
+        if (empty($normalizedPlan)) {
+            return back()->with('error', 'Reading plan generated but could not be normalized. Please regenerate.');
+        }
+
         $course->update([
-            'reading_plan' => $detailedPlan
+            'reading_plan' => $normalizedPlan
         ]);
 
         return back()->with('success', 'Detailed reading plan generated for ' . $course->title);
@@ -129,20 +137,11 @@ class ReadingPlanController extends Controller
             abort(403);
         }
 
-        $readingPlan = $course->reading_plan;
-        
-        // Handle legacy structure where weeks are wrapped in 'weekly_plan'
-        if (isset($readingPlan['weekly_plan'])) {
-            $readingPlan = $readingPlan['weekly_plan'] ?? [];
-        }
+        $readingPlan = $this->normalizeReadingPlan($course->reading_plan);
 
-        // Filter for week_ keys and ensure it's an array
-        if (is_array($readingPlan)) {
-            $readingPlan = array_filter($readingPlan, function($key) {
-                return str_starts_with($key, 'week_');
-            }, ARRAY_FILTER_USE_KEY);
-        } else {
-            $readingPlan = [];
+        // Auto-heal legacy records once viewed.
+        if (!empty($readingPlan) && $course->reading_plan !== $readingPlan) {
+            $course->update(['reading_plan' => $readingPlan]);
         }
 
         return Inertia::render('ReadingPlan/ShowDetailed', [
@@ -165,21 +164,7 @@ class ReadingPlanController extends Controller
             return back()->with('error', 'Reading plan not generated yet.');
         }
 
-        $readingPlan = $course->reading_plan;
-        
-        // Handle legacy structure
-        if (isset($readingPlan['weekly_plan'])) {
-            $readingPlan = $readingPlan['weekly_plan'] ?? [];
-        }
-
-        // Filter for week_ keys
-        if (is_array($readingPlan)) {
-            $readingPlan = array_filter($readingPlan, function($key) {
-                return str_starts_with($key, 'week_');
-            }, ARRAY_FILTER_USE_KEY);
-        } else {
-            $readingPlan = [];
-        }
+        $readingPlan = $this->normalizeReadingPlan($course->reading_plan);
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.study-handout', [
             'course' => $course,
@@ -188,5 +173,52 @@ class ReadingPlanController extends Controller
         ]);
 
         return $pdf->download("{$course->code}_Study_Handout.pdf");
+    }
+
+    /**
+     * Normalize reading plan payloads into an associative week map:
+     * ["week_1" => [...], "week_2" => [...]]
+     */
+    private function normalizeReadingPlan($plan): array
+    {
+        if (!is_array($plan) || empty($plan)) {
+            return [];
+        }
+
+        if (isset($plan['weekly_plan']) && is_array($plan['weekly_plan'])) {
+            $plan = $plan['weekly_plan'];
+        }
+
+        // Already in expected shape.
+        $hasWeekKeys = count(array_filter(array_keys($plan), fn ($key) => is_string($key) && str_starts_with($key, 'week_'))) > 0;
+        if ($hasWeekKeys) {
+            return array_filter($plan, fn ($key) => is_string($key) && str_starts_with($key, 'week_'), ARRAY_FILTER_USE_KEY);
+        }
+
+        // Convert list format: [{"week":1, ...}, {"week":2, ...}]
+        if (array_is_list($plan)) {
+            $normalized = [];
+            foreach ($plan as $entry) {
+                if (!is_array($entry)) {
+                    continue;
+                }
+
+                $weekNum = null;
+                if (isset($entry['week']) && is_numeric($entry['week'])) {
+                    $weekNum = (int) $entry['week'];
+                } elseif (isset($entry['week_number']) && is_numeric($entry['week_number'])) {
+                    $weekNum = (int) $entry['week_number'];
+                }
+
+                if ($weekNum !== null && $weekNum > 0) {
+                    unset($entry['week']);
+                    $normalized['week_' . $weekNum] = $entry;
+                }
+            }
+
+            return $normalized;
+        }
+
+        return [];
     }
 }

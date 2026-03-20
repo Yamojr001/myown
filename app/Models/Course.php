@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\CourseContent;
+use Illuminate\Support\Facades\Cache;
 
 class Course extends Model
 {
@@ -39,11 +40,21 @@ class Course extends Model
             $year = (int)$matches[1];
         }
 
-        return CourseContent::where([
-            'school' => $user->school,
-            'department' => $user->department,
-            'year' => $year,
-            'course_code' => $this->code,
-        ])->value('content');
+        $cacheKey = sprintf(
+            'course:full-content:%s:%s:%s:%s',
+            (string) $user->school,
+            (string) $user->department,
+            (string) $year,
+            (string) $this->code
+        );
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $year) {
+            return CourseContent::where([
+                'school' => $user->school,
+                'department' => $user->department,
+                'year' => $year,
+                'course_code' => $this->code,
+            ])->value('content');
+        });
     }
 }

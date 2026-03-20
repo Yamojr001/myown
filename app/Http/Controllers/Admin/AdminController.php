@@ -67,7 +67,7 @@ class AdminController extends Controller
     public function courses()
     {
         return Inertia::render('Admin/Courses/Index', [
-            'courses' => \App\Models\Course::with('user:id,name')->latest()->paginate(10),
+            'courses' => \App\Models\Course::with('user:id,name,school')->latest()->paginate(10),
         ]);
     }
 
@@ -115,6 +115,7 @@ class AdminController extends Controller
             'settings' => [
                 'app_name' => config('app.name'),
                 'ai_model' => 'Gemini 2.5 Flash',
+                'ai_daily_request_limit' => config('services.gemini.daily_request_limit'),
                 'environment' => config('app.env'),
             ]
         ]);

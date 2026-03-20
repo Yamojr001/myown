@@ -4,10 +4,15 @@ namespace App\Services;
 
 use Smalot\PdfParser\Parser;
 use GuzzleHttp\Exception\ClientException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class AiService {
     private $apiKey;
     private $client;
+    private const PRIMARY_MODEL = 'gemini-2.5-flash';
+    private const FALLBACK_MODEL = 'gemini-2.5-pro';
 
     public function __construct() {
         $this->apiKey = config('services.gemini.api_key');
@@ -59,35 +64,55 @@ class AiService {
             $base64Data = base64_encode(file_get_contents($filePath));
             $prompt = "Analyze this document or image and extract ALL readable text. Maintain paragraphs and formatting where possible. Return ONLY the raw extracted text without any surrounding quotes, tags, or markdown blocks.";
             
-            $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $this->apiKey;
-
-            $response = $this->client->post($apiUrl, [
-                'headers' => ['Content-Type'  => 'application/json'],
-                'json' => [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['text' => $prompt],
-                                ['inline_data' => [
-                                    'mime_type' => $mimeType,
-                                    'data' => $base64Data
-                                ]]
-                            ]
-                        ]
+            $requestId = (string) Str::uuid();
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt],
+                            ['inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Data,
+                            ]],
+                        ],
                     ],
-                    'generationConfig' => [
-                        'temperature' => 0.1,
-                    ]
                 ],
-                'timeout' => 60,
-            ]);
+                'generationConfig' => [
+                    'temperature' => 0.1,
+                ],
+            ];
 
-            $body = json_decode($response->getBody()->getContents(), true);
-            
-            if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
-                return $body['candidates'][0]['content']['parts'][0]['text'];
+            $models = [self::PRIMARY_MODEL, (string) config('services.gemini.fallback_model', self::FALLBACK_MODEL)];
+            foreach ($models as $model) {
+                for ($attempt = 1; $attempt <= 3; $attempt++) {
+                    try {
+                        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
+                        $response = $this->client->post($apiUrl, [
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                                'X-Request-Id' => $requestId,
+                            ],
+                            'json' => $payload,
+                            'timeout' => 60,
+                        ]);
+
+                        $body = json_decode($response->getBody()->getContents(), true);
+                        if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+                            return $body['candidates'][0]['content']['parts'][0]['text'];
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::warning('Image extraction retry failed', [
+                            'request_id' => $requestId,
+                            'model' => $model,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+
+                    usleep(random_int(200000, 900000));
+                }
             }
-            
+
             return "";
         } catch (\Exception $e) {
             \Log::error('AI Service Image/PDF Text Extraction Failed: ' . $e->getMessage());
@@ -883,7 +908,16 @@ WEAK TOPICS: [{$weakTopicsList}]";
     }
 
     private function callGemini($prompt, $timeout = 45, $maxOutputTokens = null, $mimeType = 'application/json') {
-        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" . $this->apiKey;
+        if (!$this->allowUsage()) {
+            \Log::warning('AI Service usage limit reached', [
+                'user_id' => Auth::id(),
+                'ip' => request()?->ip(),
+            ]);
+            return null;
+        }
+
+        $requestId = (string) Str::uuid();
+        $models = [self::PRIMARY_MODEL, (string) config('services.gemini.fallback_model', self::FALLBACK_MODEL)];
 
         try {
             $generationConfig = [
@@ -895,41 +929,88 @@ WEAK TOPICS: [{$weakTopicsList}]";
                 $generationConfig['maxOutputTokens'] = $maxOutputTokens;
             }
 
-            $response = $this->client->post($apiUrl, [
-                'headers' => ['Content-Type'  => 'application/json'],
-                'json' => [
-                    'contents' => [['parts' => [['text' => $prompt]]]],
-                    'generationConfig' => $generationConfig
-                ],
-                'timeout' => $timeout,
-            ]);
+            $payload = [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => $generationConfig,
+            ];
 
-            $body = json_decode($response->getBody()->getContents(), true);
-            
-            \Log::info('AI Service: Gemini API response received', [
-                'has_text' => isset($body['candidates'][0]['content']['parts'][0]['text']),
-                'response_keys' => array_keys($body)
-            ]);
-            
-            if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
-                $textContent = $body['candidates'][0]['content']['parts'][0]['text'];
-                return $textContent;
+            foreach ($models as $model) {
+                for ($attempt = 1; $attempt <= 3; $attempt++) {
+                    try {
+                        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
+                        $response = $this->client->post($apiUrl, [
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                                'X-Request-Id' => $requestId,
+                            ],
+                            'json' => $payload,
+                            'timeout' => $timeout,
+                        ]);
+
+                        $body = json_decode($response->getBody()->getContents(), true);
+
+                        \Log::info('AI Service: Gemini API response received', [
+                            'request_id' => $requestId,
+                            'model' => $model,
+                            'attempt' => $attempt,
+                            'has_text' => isset($body['candidates'][0]['content']['parts'][0]['text']),
+                            'response_keys' => array_keys($body),
+                        ]);
+
+                        if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+                            return $body['candidates'][0]['content']['parts'][0]['text'];
+                        }
+                    } catch (ClientException $e) {
+                        $responseBody = $e->getResponse()?->getBody()?->getContents();
+                        \Log::warning('Gemini API client error', [
+                            'request_id' => $requestId,
+                            'model' => $model,
+                            'attempt' => $attempt,
+                            'error' => $responseBody,
+                        ]);
+
+                        if ($attempt === 3) {
+                            break;
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::warning('Gemini API transient error', [
+                            'request_id' => $requestId,
+                            'model' => $model,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+
+                    usleep(random_int(200000, 900000));
+                }
             }
-            
-            \Log::warning('Gemini response did not contain the expected text content path.', [
-                'available_keys' => array_keys($body),
-                'candidates' => isset($body['candidates']) ? $body['candidates'] : 'no_candidates'
-            ]);
-            return null;
 
-        } catch (ClientException $e) {
-            $responseBody = $e->getResponse()->getBody()->getContents();
-            \Log::error('Gemini API Error from Google: ' . $responseBody);
+            \Log::warning('Gemini response did not contain expected text content after retries.', [
+                'request_id' => $requestId,
+            ]);
             return null;
         } catch (\Exception $e) {
-            \Log::error('General network error calling Gemini: ' . $e->getMessage());
+            \Log::error('General network error calling Gemini: ' . $e->getMessage(), [
+                'request_id' => $requestId,
+            ]);
             return null;
         }
+    }
+
+    private function allowUsage(): bool
+    {
+        $limit = (int) config('services.gemini.daily_request_limit', 500);
+        $userId = Auth::id();
+        $key = $userId
+            ? 'ai_usage:user:' . $userId . ':' . now()->toDateString()
+            : 'ai_usage:ip:' . (request()?->ip() ?? 'unknown') . ':' . now()->toDateString();
+
+        $count = Cache::increment($key);
+        if ($count === 1) {
+            Cache::put($key, 1, now()->endOfDay());
+        }
+
+        return $count <= $limit;
     }
     
     /**

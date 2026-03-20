@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Smalot\PdfParser\Parser;
+use App\Support\TestType;
 
 class CourseController extends Controller
 {
@@ -99,14 +100,34 @@ class CourseController extends Controller
     public function extractText(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:15360', // 15MB
+            'file' => 'required|file|max:15360|mimes:pdf,png,jpg,jpeg,txt,ppt,pptx|mimetypes:application/pdf,image/png,image/jpeg,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
         ]);
 
         $file = $request->file('file');
         $mimeType = $file->getMimeType();
         $extension = strtolower($file->getClientOriginalExtension());
+
+        $realMimeType = mime_content_type($file->getRealPath()) ?: $mimeType;
+        $allowedMimeByExtension = [
+            'pdf' => ['application/pdf'],
+            'png' => ['image/png'],
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'txt' => ['text/plain'],
+            'ppt' => ['application/vnd.ms-powerpoint'],
+            'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
+        ];
+
+        if (!isset($allowedMimeByExtension[$extension]) || !in_array($realMimeType, $allowedMimeByExtension[$extension], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File type validation failed. Please upload a valid course document format.'
+            ], 422);
+        }
+
         $extractedText = '';
         $pageCount = 0;
+        $maxExtractedChars = 250000;
         
         try {
             if ($extension === 'txt' || $mimeType === 'text/plain') {
@@ -157,7 +178,7 @@ class CourseController extends Controller
             
             return response()->json([
                 'success' => true,
-                'text' => trim($extractedText),
+                'text' => trim(substr($extractedText, 0, $maxExtractedChars)),
                 'pageCount' => $pageCount
             ]);
         } catch (\Exception $e) {
@@ -258,7 +279,7 @@ class CourseController extends Controller
         $uniqueWeakTopics = array_values(array_unique($weakTopics));
 
         $test = Test::create([
-            'user_id' => Auth::id(), 'course_id' => $course->id, 'type' => 'Pre-Test',
+            'user_id' => Auth::id(), 'course_id' => $course->id, 'type' => TestType::PRE_TEST,
             'score' => $score, 'weak_topics' => $uniqueWeakTopics,
         ]);
 

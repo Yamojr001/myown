@@ -8,8 +8,10 @@ use App\Services\AiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
+use App\Support\TestType;
 
 class TestController extends Controller
 {
@@ -43,16 +45,26 @@ class TestController extends Controller
         ]);
 
         $course = Auth::user()->courses()->findOrFail($validated['course_id']);
-        $testType = $validated['test_type'];
+        $testType = TestType::normalize($validated['test_type']);
         $questionCount = $validated['question_count'];
-        $isEssay = ($testType === 'Mock Exam');
+        $isEssay = ($testType === TestType::MOCK_EXAM);
+
+        $lockKey = 'idempotency:test-generate:' . Auth::id() . ':' . $course->id . ':' . $testType;
+        $lock = Cache::lock($lockKey, 15);
+        if (!$lock->get()) {
+            return back()->with('error', 'A test generation is already in progress. Please wait a few seconds and retry.');
+        }
 
         $content = $course->full_content;
         if (!$content || empty($content)) {
             return back()->with('error', 'Course has no extracted content to test on.');
         }
 
-        $testData = $this->aiService->generateTestFromContent($content, $questionCount, $isEssay);
+        try {
+            $testData = $this->aiService->generateTestFromContent($content, $questionCount, $isEssay);
+        } finally {
+            optional($lock)->release();
+        }
         
         if (!$testData) {
             return back()->with('error', 'AI failed to generate a test. Please try again.');
@@ -73,7 +85,7 @@ class TestController extends Controller
             'test_questions' => $testData['questions'],
             'test_course_id' => $course->id,
             'test_type' => $testType,
-            'test_name' => $testType . ' Test',
+            'test_name' => TestType::label($testType) . ' Test',
         ]);
 
         return redirect()->route('tests.take');
@@ -93,7 +105,7 @@ class TestController extends Controller
         }
 
         $course = Course::find($courseId);
-        $isEssay = ($testType === 'Mock Exam');
+        $isEssay = (TestType::normalize($testType ?? '') === TestType::MOCK_EXAM);
 
         if ($isEssay) {
             return Inertia::render('Tests/MockExam', [
@@ -134,8 +146,8 @@ class TestController extends Controller
             abort(403, 'You do not have access to this course.');
         }
 
-        $testType = $request->input('test_type', 'Pre-Test');
-        $testName = $request->input('test_name', 'Pre-Test Test');
+        $testType = TestType::normalize($request->input('test_type', TestType::PRE_TEST));
+        $testName = $request->input('test_name', TestType::label($testType) . ' Test');
         
         // Check if test of this type already exists for this course
         $existingTest = Test::where('course_id', $course->id)
@@ -153,7 +165,9 @@ class TestController extends Controller
         }
 
         // Generate test from content
-        $testData = $this->aiService->generateTestFromContent($content);
+        $isEssay = ($testType === TestType::MOCK_EXAM);
+        $questionCount = $isEssay ? 5 : 50;
+        $testData = $this->aiService->generateTestFromContent($content, $questionCount, $isEssay);
         
         if (!$testData) {
             Log::error('Failed to generate test data', [
@@ -207,7 +221,7 @@ class TestController extends Controller
         // Retrieve test data from session
         $questions = session('test_questions');
         $courseId = session('test_course_id');
-        $testType = session('test_type', 'Pre-Test');
+        $testType = TestType::normalize((string) session('test_type', TestType::PRE_TEST));
         $testName = session('test_name', 'Test');
         
         if (!$questions || !$courseId) {
@@ -271,7 +285,7 @@ class TestController extends Controller
         ]);
 
         // If this was a scheduled test (not Pre-Test), update master timetable
-        if ($testType !== 'Pre-Test') {
+        if ($testType !== TestType::PRE_TEST) {
             $this->updateMasterTimetable($user, $testType);
         }
 
@@ -296,7 +310,7 @@ class TestController extends Controller
         $user = Auth::user();
         $questions = session('test_questions');
         $courseId = session('test_course_id');
-        $testType = session('test_type', 'Mock Exam');
+        $testType = TestType::normalize((string) session('test_type', TestType::MOCK_EXAM));
 
         if (!$questions || !$courseId) {
             return response()->json(['error' => 'Test session expired.'], 400);
@@ -465,14 +479,15 @@ class TestController extends Controller
     {
    
         $types = [
-            'Pre-Test' => 'Pre-Test',
-            'mid_semester' => 'Mid-Semester',
-            'post_test' => 'Post-Test',
-            'mock_exam' => 'Mock Exam',
+            TestType::PRE_TEST => 'Pre-Test',
+            TestType::MID_SEMESTER => 'Mid-Semester',
+            TestType::POST_TEST => 'Post-Test',
+            TestType::MOCK_EXAM => 'Mock Exam',
+            TestType::RANDOM_TEST => 'Random Test',
         ];
 
-
-        return $types[$type] ?? ucfirst($type);
+        $normalized = TestType::normalize((string) $type);
+        return $types[$normalized] ?? ucfirst(str_replace('_', ' ', $normalized));
     }
 
     /**

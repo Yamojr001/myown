@@ -7,6 +7,7 @@ use App\Models\Suggestion;
 use App\Services\AiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
 use League\CommonMark\CommonMarkConverter;
@@ -55,7 +56,17 @@ class SuggestionController extends Controller
             return back()->with('error', 'Course content is missing. Please try re-uploading the course.');
         }
 
-        $markdownContent = $aiService->generateStudyGuide($content, $weakTopics);
+        $lockKey = 'idempotency:suggestion-generate:' . $request->user()->id . ':' . $course->id;
+        $lock = Cache::lock($lockKey, 30);
+        if (!$lock->get()) {
+            return back()->with('error', 'A study guide generation is already in progress. Please wait and retry.');
+        }
+
+        try {
+            $markdownContent = $aiService->generateStudyGuide($content, $weakTopics);
+        } finally {
+            optional($lock)->release();
+        }
 
         if (!$markdownContent) {
             return back()->with('error', 'The AI failed to generate a study guide at this time. Please try again later.');

@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\TestCompleted;
 use App\Models\MasterTimetable;
+use App\Support\TestType;
 
 class UpdateTestProgressListener
 {
@@ -22,7 +23,7 @@ class UpdateTestProgressListener
         $allTestsTaken = true;
         
         foreach ($courses as $course) {
-            if (!$course->tests()->where('test_type', $event->testType)->exists()) {
+            if (!$course->tests()->where('type', TestType::normalize((string) $event->testType))->exists()) {
                 $allTestsTaken = false;
                 break;
             }
@@ -34,7 +35,7 @@ class UpdateTestProgressListener
             $nextTest = null;
             
             foreach ($testSchedule as $test) {
-                if ($test['type'] === $event->testType) {
+                if (TestType::normalize((string) $test['type']) === TestType::normalize((string) $event->testType)) {
                     $currentIndex = array_search($test, $testSchedule);
                     if (isset($testSchedule[$currentIndex + 1])) {
                         $nextTest = $testSchedule[$currentIndex + 1];

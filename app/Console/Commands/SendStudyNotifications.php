@@ -11,6 +11,7 @@ use App\Mail\ReadingReminderMail;
 use App\Mail\TestAlertMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SendStudyNotifications extends Command
 {
@@ -33,13 +34,23 @@ class SendStudyNotifications extends Command
      */
     public function handle(ProactiveStudyService $proactiveService, AiService $aiService)
     {
+        $startedAt = microtime(true);
         $this->info('Starting study notification dispatch...');
+
+        $stats = [
+            'processed_users' => 0,
+            'test_alerts_queued' => 0,
+            'study_reminders_queued' => 0,
+            'errors' => 0,
+        ];
 
         $timetables = MasterTimetable::with('user')->get();
 
         foreach ($timetables as $timetable) {
             $user = $timetable->user;
             if (!$user) continue;
+
+            $stats['processed_users']++;
 
             $this->info("Processing user: {$user->email}");
 
@@ -48,8 +59,18 @@ class SendStudyNotifications extends Command
             if ($testAlert) {
                 // To avoid spamming everyday of the week, maybe send only on Monday or specific days
                 if (now()->format('l') === 'Monday' || now()->format('l') === 'Thursday') {
-                    Mail::to($user->email)->send(new TestAlertMail($user, $testAlert));
-                    $this->info("   - Sent Test Alert: {$testAlert['name']}");
+                    try {
+                        Mail::to($user->email)->queue((new TestAlertMail($user, $testAlert))->onQueue('mail')->delay(now()->addSeconds(5)));
+                        $stats['test_alerts_queued']++;
+                        $this->info("   - Queued Test Alert: {$testAlert['name']}");
+                    } catch (Throwable $e) {
+                        $stats['errors']++;
+                        Log::error('Failed to queue test alert', [
+                            'user_id' => $user->id,
+                            'email' => $user->email,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
 
@@ -76,12 +97,34 @@ class SendStudyNotifications extends Command
                 }
 
                 if (!empty($processedAssignments)) {
-                    Mail::to($user->email)->send(new ReadingReminderMail($user, $processedAssignments, $timetable->current_week));
-                    $this->info("   - Sent Daily Study Flash with " . count($processedAssignments) . " courses.");
+                    try {
+                        Mail::to($user->email)->queue((new ReadingReminderMail($user, $processedAssignments, $timetable->current_week))->onQueue('mail')->delay(now()->addSeconds(10)));
+                        $stats['study_reminders_queued']++;
+                        $this->info("   - Queued Daily Study Flash with " . count($processedAssignments) . " courses.");
+                    } catch (Throwable $e) {
+                        $stats['errors']++;
+                        Log::error('Failed to queue reading reminder', [
+                            'user_id' => $user->id,
+                            'email' => $user->email,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
         }
 
+        $durationMs = (int) ((microtime(true) - $startedAt) * 1000);
+        Log::info('Study notifications dispatch finished', $stats + ['duration_ms' => $durationMs]);
+
         $this->info('Notification dispatch completed.');
+        $this->table(['Metric', 'Value'], [
+            ['Processed users', (string) $stats['processed_users']],
+            ['Test alerts queued', (string) $stats['test_alerts_queued']],
+            ['Study reminders queued', (string) $stats['study_reminders_queued']],
+            ['Errors', (string) $stats['errors']],
+            ['Duration (ms)', (string) $durationMs],
+        ]);
+
+        return $stats['errors'] > 0 ? self::FAILURE : self::SUCCESS;
     }
 }

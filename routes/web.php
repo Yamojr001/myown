@@ -12,6 +12,7 @@ use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\PastQuestionController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -50,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     // Course Management & Testing
     Route::get('/my-courses', [CourseController::class, 'index'])->name('courses.index');
-    Route::post('/courses/extract-text', [CourseController::class, 'extractText'])->name('courses.extract-text');
+    Route::post('/courses/extract-text', [CourseController::class, 'extractText'])->middleware('throttle:ai-heavy')->name('courses.extract-text');
     Route::post('/my-courses', [CourseController::class, 'store'])->name('courses.store');
     Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
     Route::get('/courses/{course}/pre-test', [CourseController::class, 'showTest'])->name('courses.test.show');
@@ -60,27 +61,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Advanced Testing Dashboard
     // Use /assessment* paths to avoid conflicts with the project-level /tests directory on some web servers.
     Route::get('/assessment', [TestController::class, 'index'])->name('tests.index');
-    Route::post('/assessment/generate', [TestController::class, 'generate'])->name('tests.generate');
+    Route::post('/assessment/generate', [TestController::class, 'generate'])->middleware('throttle:ai-heavy')->name('tests.generate');
+    Route::get('/assessment/{course}/create', [TestController::class, 'create'])->name('tests.create');
     Route::get('/assessment/take', [TestController::class, 'take'])->name('tests.take');
-    Route::post('/assessment/store-objective', [TestController::class, 'storeObjective'])->name('tests.store.objective');
-    Route::post('/assessment/store-essay', [TestController::class, 'storeEssay'])->name('tests.store.essay');
+    Route::post('/assessment/store-objective', [TestController::class, 'storeObjective'])->middleware('throttle:ai-heavy')->name('tests.store.objective');
+    Route::post('/assessment/store-essay', [TestController::class, 'storeEssay'])->middleware('throttle:ai-heavy')->name('tests.store.essay');
     Route::get('/assessment/{test}/results', [TestController::class, 'showResult'])->name('tests.result.show');
 
     // AI Suggestion Routes
     Route::get('/courses/{course}/suggestion', [SuggestionController::class, 'show'])->name('suggestion.show');
-    Route::post('/courses/{course}/suggestion', [SuggestionController::class, 'generate'])->name('suggestion.generate');
+    Route::post('/courses/{course}/suggestion', [SuggestionController::class, 'generate'])->middleware('throttle:ai-heavy')->name('suggestion.generate');
     Route::get('/suggestion/{suggestion}/download', [SuggestionController::class, 'download'])->name('suggestion.download');
 
     // Master Timetable Routes
     Route::get('/master-timetable', [MasterTimetableController::class, 'show'])->name('master-timetable.show');
-    Route::post('/master-timetable', [MasterTimetableController::class, 'generate'])->name('master-timetable.generate');
+    Route::post('/master-timetable', [MasterTimetableController::class, 'generate'])->middleware('throttle:ai-heavy')->name('master-timetable.generate');
     Route::get('/master-timetable/download', [MasterTimetableController::class, 'download'])->name('master-timetable.download');
     Route::get('/master-timetable/week/{week}', [MasterTimetableController::class, 'getWeek'])->name('master-timetable.week');
     Route::get('/master-timetable/start-test', [MasterTimetableController::class, 'startTest'])->name('master-timetable.start-test');
 
     // Reading Plan Route
     Route::get('/reading-plan', [ReadingPlanController::class, 'index'])->name('reading-plan.index');
-    Route::post('/reading-plan/{course}/generate', [ReadingPlanController::class, 'generate'])->name('reading-plan.generate');
+    Route::post('/reading-plan/{course}/generate', [ReadingPlanController::class, 'generate'])->middleware('throttle:ai-heavy')->name('reading-plan.generate');
     Route::get('/reading-plan/{course}/view', [ReadingPlanController::class, 'showDetailed'])->name('reading-plan.show');
     Route::get('/reading-plan/{course}/download-handout', [ReadingPlanController::class, 'downloadHandout'])->name('reading-plan.download-handout');
 
@@ -89,7 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Tutor and Read Aloud
     Route::get('/tutor', function() { return Inertia::render('Tutor/Show'); })->name('tutor.show');
-    Route::post('/tutor/explain', [\App\Http\Controllers\TutorController::class, 'explain'])->name('tutor.explain');
+    Route::post('/tutor/explain', [\App\Http\Controllers\TutorController::class, 'explain'])->middleware('throttle:ai-heavy')->name('tutor.explain');
     Route::get('/read-aloud', function() { return Inertia::render('ReadAloud/Show'); })->name('read-aloud.show');
 
     // Past Questions Routes
@@ -98,8 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/past-questions/upload', [PastQuestionController::class, 'create'])->name('past-questions.upload');
     Route::post('/past-questions/upload', [PastQuestionController::class, 'store'])->name('past-questions.store');
     Route::get('/past-questions/{pastQuestion}/solve', [PastQuestionController::class, 'solve'])->name('past-questions.solve');
-    Route::post('/past-questions/{pastQuestion}/ai-solve', [PastQuestionController::class, 'aiSolve'])->name('past-questions.ai-solve');
-    Route::post('/past-questions/{pastQuestion}/grade', [PastQuestionController::class, 'grade'])->name('past-questions.grade');
+    Route::post('/past-questions/{pastQuestion}/ai-solve', [PastQuestionController::class, 'aiSolve'])->middleware('throttle:ai-heavy')->name('past-questions.ai-solve');
+    Route::post('/past-questions/{pastQuestion}/grade', [PastQuestionController::class, 'grade'])->middleware('throttle:ai-heavy')->name('past-questions.grade');
     Route::get('/past-questions/{pastQuestion}/download', [PastQuestionController::class, 'download'])->name('past-questions.download');
 
     // Review & Suggestion Routes
@@ -127,10 +129,14 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 });
 
 // Newsletter Unsubscription
-Route::get('/newsletter/unsubscribe/{email}', function (Request $request, $email) {
-    \App\Models\User::where('email', $email)->update(['subscribed_to_newsletter' => false]);
+Route::get('/newsletter/unsubscribe/{user}', function (Request $request, \App\Models\User $user) {
+    if (!$request->hasValidSignature()) {
+        abort(403);
+    }
+
+    $user->update(['subscribed_to_newsletter' => false]);
     return Inertia::render('Auth/Unsubscribed');
-})->name('newsletter.unsubscribe');
+})->middleware('signed')->name('newsletter.unsubscribe');
 
 // Deactivated Notice Page
 Route::get('/deactivated', function () {

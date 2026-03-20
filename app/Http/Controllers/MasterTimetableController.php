@@ -6,10 +6,12 @@ use App\Models\MasterTimetable;
 use App\Models\Test;
 use App\Models\Course;
 use App\Services\AiService;
+use App\Support\TestType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class MasterTimetableController extends Controller
 {
@@ -118,14 +120,24 @@ class MasterTimetableController extends Controller
         // Calculate test schedule based on semester weeks
         $testSchedule = $this->calculateTestSchedule($preferences['semester_duration_weeks']);
         
-        // Generate semester schedule with test weeks
-        $weeklySchedule = $aiService->generateSemesterSchedule(
-            $coursesForAI, 
-            $preferences,
-            $preferences['semester_duration_weeks'],
-            $testSchedule,
-            (int)$preferences['semester_current_week']
-        );
+        $lockKey = 'idempotency:timetable-generate:' . $user->id;
+        $lock = Cache::lock($lockKey, 30);
+        if (!$lock->get()) {
+            return back()->with('error', 'A timetable generation is already in progress. Please wait and retry.');
+        }
+
+        try {
+            // Generate semester schedule with test weeks
+            $weeklySchedule = $aiService->generateSemesterSchedule(
+                $coursesForAI,
+                $preferences,
+                $preferences['semester_duration_weeks'],
+                $testSchedule,
+                (int)$preferences['semester_current_week']
+            );
+        } finally {
+            optional($lock)->release();
+        }
 
         if (!$weeklySchedule) {
             return back()->with('error', 'The AI failed to generate a timetable at this time. Please try again.');
@@ -174,7 +186,7 @@ class MasterTimetableController extends Controller
         $testWeeks[] = [
             'name' => 'Mid-Semester Test',
             'week' => $currentWeek,
-            'type' => 'mid_semester',
+            'type' => TestType::MID_SEMESTER,
             'description' => 'Assess progress after first study period',
         ];
         
@@ -183,7 +195,7 @@ class MasterTimetableController extends Controller
         $testWeeks[] = [
             'name' => 'Post-Test',
             'week' => $currentWeek,
-            'type' => 'post_test',
+            'type' => TestType::POST_TEST,
             'description' => 'Evaluate understanding after second study period',
         ];
         
@@ -192,7 +204,7 @@ class MasterTimetableController extends Controller
         $testWeeks[] = [
             'name' => 'Mock Exam',
             'week' => $semesterWeeks - 1,
-            'type' => 'mock_exam',
+            'type' => TestType::MOCK_EXAM,
             'description' => 'Final comprehensive exam simulation',
         ];
         
@@ -265,10 +277,19 @@ class MasterTimetableController extends Controller
             return back()->with('error', 'You have already taken this test.');
         }
         
-        // Redirect to test page
+        $nextCourse = $courses->first(function ($course) use ($currentTest) {
+            return !$course->tests()->where('type', TestType::normalize((string) $currentTest['type']))->exists();
+        });
+
+        if (!$nextCourse) {
+            return back()->with('error', 'No eligible course found for this test.');
+        }
+
+        // Redirect to per-course test creation route.
         return redirect()->route('tests.create', [
-            'test_type' => $currentTest['type'],
-            'test_name' => $currentTest['name']
+            'course' => $nextCourse->id,
+            'test_type' => TestType::normalize((string) $currentTest['type']),
+            'test_name' => $currentTest['name'],
         ]);
     }
 
@@ -289,7 +310,7 @@ class MasterTimetableController extends Controller
         
         // Find next test
         foreach ($testSchedule as $test) {
-            if ($test['type'] === $testType) {
+            if (TestType::normalize((string) $test['type']) === TestType::normalize((string) $testType)) {
                 $currentIndex = array_search($test, $testSchedule);
                 if (isset($testSchedule[$currentIndex + 1])) {
                     $nextTest = $testSchedule[$currentIndex + 1];
@@ -333,16 +354,18 @@ class MasterTimetableController extends Controller
             }
         }
         
-        // Regenerate weekly schedule
-        $aiService = app(AiService::class);
-        $weeklySchedule = $aiService->generateWeeklyTimetableFromSemesterSchedule(
-            $timetable->weekly_schedule,
-            [
-                'preferred_time' => 'evening',
-                'study_hours' => 15,
-            ],
-            $week
-        );
+        $cacheKey = 'weekly-schedule:' . $user->id . ':' . $week . ':' . optional($timetable->updated_at)?->timestamp;
+        $weeklySchedule = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($timetable, $week) {
+            $aiService = app(AiService::class);
+            return $aiService->generateWeeklyTimetableFromSemesterSchedule(
+                $timetable->weekly_schedule,
+                [
+                    'preferred_time' => 'evening',
+                    'study_hours' => 15,
+                ],
+                $week
+            );
+        });
 
         return response()->json([
             'schedule' => $weeklySchedule,
@@ -368,15 +391,18 @@ class MasterTimetableController extends Controller
         $week = $request->query('week', $timetable->current_week);
         $week = min(max(1, $week), $timetable->semester_duration_weeks);
 
-        $aiService = app(AiService::class);
-        $weeklySchedule = $aiService->generateWeeklyTimetableFromSemesterSchedule(
-            $timetable->weekly_schedule,
-            [
-                'preferred_time' => 'evening',
-                'study_hours' => 15,
-            ],
-            $week
-        );
+        $cacheKey = 'weekly-schedule-download:' . $user->id . ':' . $week . ':' . optional($timetable->updated_at)?->timestamp;
+        $weeklySchedule = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($timetable, $week) {
+            $aiService = app(AiService::class);
+            return $aiService->generateWeeklyTimetableFromSemesterSchedule(
+                $timetable->weekly_schedule,
+                [
+                    'preferred_time' => 'evening',
+                    'study_hours' => 15,
+                ],
+                $week
+            );
+        });
 
         $data = [
             'user' => $user,

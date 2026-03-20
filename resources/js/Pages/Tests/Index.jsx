@@ -4,11 +4,11 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import PrimaryButton from '@/Components/PrimaryButton';
 
 export default function Index({ auth, courses }) {
-    const [activeTab, setActiveTab] = useState('Mid-Semester');
+    const [activeTab, setActiveTab] = useState('mid_semester');
 
     const { data, setData, post, processing, errors } = useForm({
         course_id: courses.length > 0 ? courses[0].id : '',
-        test_type: 'Mid-Semester',
+        test_type: 'mid_semester',
         question_count: 50,
     });
 
@@ -50,20 +50,20 @@ export default function Index({ auth, courses }) {
 
                             <div className="flex flex-wrap border-b border-gray-200">
                                 <button
-                                    onClick={() => handleTabChange('Mid-Semester', 50)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mid-Semester' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    onClick={() => handleTabChange('mid_semester', 50)}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'mid_semester' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-file-alt mr-2"></i> Mid-Semester Test
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('Mock Exam', 5)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Mock Exam' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    onClick={() => handleTabChange('mock_exam', 5)}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'mock_exam' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-pen-nib mr-2"></i> Mock Exam (Essay)
                                 </button>
                                 <button
-                                    onClick={() => handleTabChange('Random Test', 20)}
-                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'Random Test' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
+                                    onClick={() => handleTabChange('random_test', 20)}
+                                    className={`flex-1 py-4 px-6 text-center text-sm font-bold uppercase transition-colors ${activeTab === 'random_test' ? 'bg-brand-blue/10 text-brand-blue border-b-2 border-brand-blue' : 'text-brand-secondary hover:bg-gray-50'}`}
                                 >
                                     <i className="fas fa-dice mr-2"></i> Random Test
                                 </button>
@@ -74,14 +74,14 @@ export default function Index({ auth, courses }) {
 
                                     <div className="text-center mb-8">
                                         <h3 className="text-2xl font-black text-brand-dark mb-2">
-                                            {activeTab === 'Mid-Semester' && 'Standard Multiple Choice'}
-                                            {activeTab === 'Mock Exam' && 'AI-Graded Essay Exam'}
-                                            {activeTab === 'Random Test' && 'Custom Multiple Choice'}
+                                            {activeTab === 'mid_semester' && 'Standard Multiple Choice'}
+                                            {activeTab === 'mock_exam' && 'AI-Graded Essay Exam'}
+                                            {activeTab === 'random_test' && 'Custom Multiple Choice'}
                                         </h3>
                                         <p className="text-brand-secondary">
-                                            {activeTab === 'Mid-Semester' && 'Generate a comprehensive 50-question objective test covering all course topics evenly.'}
-                                            {activeTab === 'Mock Exam' && 'Generate an essay-based exam and use the voice-to-text dictation tool to write your answers. Graded by AI.'}
-                                            {activeTab === 'Random Test' && 'Generate a quick multiple-choice quiz with a custom number of questions to test your knowledge.'}
+                                            {activeTab === 'mid_semester' && 'Generate a comprehensive 50-question objective test covering all course topics evenly.'}
+                                            {activeTab === 'mock_exam' && 'Generate an essay-based exam and use the voice-to-text dictation tool to write your answers. Graded by AI.'}
+                                            {activeTab === 'random_test' && 'Generate a quick multiple-choice quiz with a custom number of questions to test your knowledge.'}
                                         </p>
                                     </div>
 
@@ -100,7 +100,7 @@ export default function Index({ auth, courses }) {
                                         {errors.course_id && <p className="text-red-500 text-xs mt-1">{errors.course_id}</p>}
                                     </div>
 
-                                    {activeTab === 'Random Test' && (
+                                    {activeTab === 'random_test' && (
                                         <div>
                                             <label className="block text-sm font-bold text-brand-dark mb-2">Number of Questions (5-100)</label>
                                             <input

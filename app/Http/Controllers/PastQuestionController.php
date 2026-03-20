@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class PastQuestionController extends Controller
 {
@@ -23,9 +24,16 @@ class PastQuestionController extends Controller
      */
     public function index(Request $request)
     {
-        $universities = PastQuestion::distinct()->pluck('school');
+        $user = Auth::user();
+
+        $baseQuery = PastQuestion::query();
+        if (!$user->is_admin) {
+            $baseQuery->where('user_id', $user->id);
+        }
+
+        $universities = (clone $baseQuery)->distinct()->pluck('school');
         
-        $query = PastQuestion::query();
+        $query = $baseQuery;
 
         if ($request->filled('university')) {
             $query->where('school', $request->university);
@@ -67,13 +75,19 @@ class PastQuestionController extends Controller
             'course_code' => 'required|string|max:50',
             'course_title' => 'required|string|max:255',
             'year' => 'required|string|max:4',
-            'file' => 'nullable|file|mimes:pdf,png,jpg,jpeg,txt|max:10240',
+            'file' => 'nullable|file|max:10240|mimes:pdf,png,jpg,jpeg,txt|mimetypes:application/pdf,image/png,image/jpeg,text/plain',
             'content' => 'nullable|string',
         ]);
 
         $filePath = null;
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store('past_questions', 'public');
+            $uploadedFile = $request->file('file');
+            $realMimeType = mime_content_type($uploadedFile->getRealPath()) ?: $uploadedFile->getMimeType();
+            $allowed = ['application/pdf', 'image/png', 'image/jpeg', 'text/plain'];
+            if (!in_array($realMimeType, $allowed, true)) {
+                throw new HttpException(422, 'File type validation failed.');
+            }
+            $filePath = $uploadedFile->store('past_questions', 'public');
         }
 
         $content = $validated['content'];
@@ -103,6 +117,8 @@ class PastQuestionController extends Controller
      */
     public function solve(PastQuestion $pastQuestion)
     {
+        $this->authorizePastQuestion($pastQuestion);
+
         return Inertia::render('PastQuestions/Solve', [
             'pastQuestion' => $pastQuestion,
         ]);
@@ -113,6 +129,8 @@ class PastQuestionController extends Controller
      */
     public function aiSolve(PastQuestion $pastQuestion)
     {
+        $this->authorizePastQuestion($pastQuestion);
+
         if (empty($pastQuestion->content)) {
             return response()->json(['error' => 'No content available for AI processing.'], 400);
         }
@@ -127,6 +145,8 @@ class PastQuestionController extends Controller
      */
     public function grade(Request $request, PastQuestion $pastQuestion)
     {
+        $this->authorizePastQuestion($pastQuestion);
+
         $validated = $request->validate([
             'user_answers' => 'required|array',
         ]);
@@ -148,10 +168,20 @@ class PastQuestionController extends Controller
      */
     public function download(PastQuestion $pastQuestion)
     {
+        $this->authorizePastQuestion($pastQuestion);
+
         if (!$pastQuestion->file_path || !Storage::disk('public')->exists($pastQuestion->file_path)) {
             abort(404, 'File not found.');
         }
 
         return Storage::disk('public')->download($pastQuestion->file_path);
+    }
+
+    private function authorizePastQuestion(PastQuestion $pastQuestion): void
+    {
+        $user = Auth::user();
+        if (!$user || (!$user->is_admin && $pastQuestion->user_id !== $user->id)) {
+            abort(403, 'Unauthorized access to this past question.');
+        }
     }
 }

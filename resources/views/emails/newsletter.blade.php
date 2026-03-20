@@ -32,9 +32,10 @@
         }
 
         .header {
-            padding: 30px 20px 10px;
+            padding: 42px 24px 34px;
             text-align: center;
-            background: #ffffff;
+            background-color: #1e3a8a;
+            color: #ffffff;
         }
 
         .logo-container {
@@ -43,8 +44,8 @@
         }
 
         .logo-svg {
-            width: 44px;
-            height: 44px;
+            width: 72px;
+            height: 72px;
             display: block;
             margin: 0 auto;
         }
@@ -52,10 +53,19 @@
         .logo-text {
             font-size: 26px;
             font-weight: 950;
-            color: #1e3a8a;
+            color: #ffffff;
             letter-spacing: -1px;
             display: block;
             margin-top: 5px;
+        }
+
+        .header-subtitle {
+            margin-top: 10px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.8px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.82);
         }
 
         .content {
@@ -135,8 +145,9 @@
         <div class="email-wrapper">
             <div class="header">
                 <div style="text-align: center; margin: 0 auto 15px; padding: 0;">
-                    <img src="{{ $message->embed(public_path('images/branding/logo.png')) }}" alt="Phronix AI Logo" style="height: 80px; vertical-align: middle;">
+                    <img src="{{ $message->embed(public_path('images/branding/logo.png')) }}" alt="Phronix AI Logo" style="height: 120px; vertical-align: middle;">
                 </div>
+                <div class="header-subtitle">Phronix AI Administrative Broadcast</div>
             </div>
 
             <div class="content">

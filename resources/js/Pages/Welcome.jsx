@@ -160,7 +160,7 @@ export default function Welcome({ auth }) {
                     </div>
 
                     <div className="container mx-auto px-6 text-center relative z-10">
-                        <span className="inline-block bg-brand-blue/10 text-brand-blue border border-brand-blue/20 px-5 py-2 rounded-full font-bold text-xs mb-8 tracking-widest shadow-sm uppercase">🚀 The Ultimate AI-Powered Study Architect</span>
+                        {/* <span className="inline-block bg-brand-blue/10 text-brand-blue border border-brand-blue/20 px-5 py-2 rounded-full font-bold text-xs mb-8 tracking-widest shadow-sm uppercase">🚀 The Ultimate AI-Powered Study Architect</span> */}
                         <h1 className="text-5xl md:text-8xl font-black text-brand-dark mb-8 leading-tight tracking-tighter">
                             Master Your <br />
                             <TypingEffect words={typingWords} />

@@ -8,6 +8,21 @@ use Symfony\Component\HttpFoundation\Response;
 
 class LogUserActivity
 {
+    private const SENSITIVE_KEYS = [
+        'password',
+        'password_confirmation',
+        'current_password',
+        'token',
+        'api_key',
+        'secret',
+        'authorization',
+        'cookie',
+        'access_token',
+        'refresh_token',
+        'email',
+        'phone_number',
+    ];
+
     /**
      * Handle an incoming request.
      *
@@ -68,12 +83,28 @@ class LogUserActivity
                     'metadata' => [
                         'url' => $request->fullUrl(),
                         'method' => $request->method(),
-                        'payload' => $request->except(['password', 'password_confirmation', '_token']),
+                        'payload' => $this->maskSensitive($request->except(['_token'])),
                     ],
                 ]);
             }
         }
 
         return $next($request);
+    }
+
+    private function maskSensitive(array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (in_array(strtolower((string) $key), self::SENSITIVE_KEYS, true)) {
+                $payload[$key] = '***';
+                continue;
+            }
+
+            if (is_array($value)) {
+                $payload[$key] = $this->maskSensitive($value);
+            }
+        }
+
+        return $payload;
     }
 }

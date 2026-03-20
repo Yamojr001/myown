@@ -6,9 +6,11 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 
-class NewsletterMail extends Mailable
+class NewsletterMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -24,6 +26,13 @@ class NewsletterMail extends Mailable
         $this->subjectLine = $subjectLine;
         $this->contentBody = $contentBody;
         $this->user = $user;
+    }
+
+    public int $tries = 3;
+
+    public function backoff(): array
+    {
+        return [30, 120, 300];
     }
 
     /**
@@ -47,7 +56,11 @@ class NewsletterMail extends Mailable
                 'contentBody' => $this->contentBody,
                 'subjectLine' => $this->subjectLine,
                 'user' => $this->user,
-                'unsubscribeUrl' => route('newsletter.unsubscribe', ['email' => $this->user->email]),
+                'unsubscribeUrl' => URL::temporarySignedRoute(
+                    'newsletter.unsubscribe',
+                    now()->addDays(30),
+                    ['user' => $this->user->id]
+                ),
             ],
         );
     }

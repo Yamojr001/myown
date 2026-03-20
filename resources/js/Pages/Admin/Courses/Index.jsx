@@ -27,8 +27,8 @@ export default function Index({ auth, courses }) {
                                 {courses.data.map((course) => (
                                     <tr key={course.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/30 transition-colors">
                                         <td className="px-8 py-6">
-                                            <div className="font-bold text-brand-dark uppercase tracking-tighter">{course.course_code}</div>
-                                            <div className="text-xs text-gray-400 font-black uppercase tracking-widest truncate max-w-[300px]">{course.school}</div>
+                                            <div className="font-bold text-brand-dark uppercase tracking-tighter">{course.code}</div>
+                                            <div className="text-xs text-gray-400 font-black uppercase tracking-widest truncate max-w-[300px]">{course.user?.school || 'School not set'}</div>
                                         </td>
                                         <td className="px-8 py-6">
                                             <div className="text-sm font-bold text-brand-blue uppercase tracking-widest">

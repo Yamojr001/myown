@@ -6,9 +6,10 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\SerializesModels;
 
-class ReadingReminderMail extends Mailable
+class ReadingReminderMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -24,6 +25,13 @@ class ReadingReminderMail extends Mailable
         $this->user = $user;
         $this->assignments = $assignments;
         $this->weekNumber = $weekNumber;
+    }
+
+    public int $tries = 3;
+
+    public function backoff(): array
+    {
+        return [30, 120, 300];
     }
 
     public function envelope(): Envelope
