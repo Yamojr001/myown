@@ -28,6 +28,7 @@ export default function Index({ auth, users }) {
                             <thead>
                                 <tr className="bg-gray-50/50">
                                     <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Scholar</th>
+                                    <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Contact</th>
                                     <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Role</th>
                                     <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Status</th>
                                     <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Joined</th>
@@ -47,6 +48,23 @@ export default function Index({ auth, users }) {
                                                     <div className="text-sm text-gray-400 font-medium">{user.email}</div>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            {user.phone_number ? (
+                                                <a 
+                                                    href={`https://wa.me/${user.phone_number.replace(/\D/g, '')}`} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-emerald-500 transition-colors group"
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                                                        <i className="fab fa-whatsapp"></i>
+                                                    </div>
+                                                    {user.phone_number}
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs font-bold text-gray-300 italic uppercase tracking-tighter">No Phone</span>
+                                            )}
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${user.is_admin ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>

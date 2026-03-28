@@ -113,11 +113,79 @@ export default function SolvePage({ auth, pastQuestion }) {
                             </h2>
                             
                             <div className="text-gray-700 leading-relaxed font-serif text-lg">
-                                {pastQuestion.content ? (
+                                {aiAnswers ? (
+                                    <div className="animate-in fade-in slide-in-from-bottom-5 duration-700">
+                                        <div className="flex items-center justify-between mb-8 bg-indigo-50 p-6 rounded-[2.5rem] border border-indigo-100 shadow-sm">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                                                    <i className="fas fa-robot text-xl"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-black text-indigo-900 tracking-tight">AI Master Solutions</h3>
+                                                    <p className="text-xs text-indigo-700/60 font-black uppercase tracking-widest">Optimized for study</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => setAiAnswers(null)}
+                                                className="px-6 py-3 bg-white hover:bg-gray-50 border border-indigo-200 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-indigo-600 shadow-sm active:scale-95"
+                                            >
+                                                <i className="fas fa-times mr-2"></i> Close AI
+                                            </button>
+                                        </div>
+                                        <div className="glass-card rounded-[3rem] p-8 md:p-12 border-white/5 shadow-2xl prose prose-indigo max-w-none text-gray-800 leading-loose">
+                                            <ReactMarkdown>{aiAnswers}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                ) : pastQuestion.content ? (
                                     <ReactMarkdown>{pastQuestion.content}</ReactMarkdown>
+                                ) : pastQuestion.file_path ? (
+                                    <div className="w-full h-full min-h-[500px] flex flex-col">
+                                        <div className="flex items-center justify-between mb-6 bg-brand-blue/5 p-5 rounded-[2rem] border border-brand-blue/10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center text-brand-blue">
+                                                    <i className="fas fa-file-pdf"></i>
+                                                </div>
+                                                <span className="text-sm font-black text-gray-700 uppercase tracking-widest">Question Paper Reference</span>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <a 
+                                                    href={route('past-questions.download', pastQuestion.id)} 
+                                                    className="text-gray-400 hover:text-brand-blue text-[10px] font-black uppercase tracking-[0.2em] transition-colors"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    Open Original <i className="fas fa-external-link-alt ml-1"></i>
+                                                </a>
+                                                <button 
+                                                    onClick={handleAiSolve}
+                                                    disabled={isAiSolving}
+                                                    className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-blue/20 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                                                >
+                                                    {isAiSolving ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
+                                                    Solve with AI
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {pastQuestion.file_path.toLowerCase().endsWith('.pdf') ? (
+                                            <iframe 
+                                                src={`/storage/${pastQuestion.file_path}#toolbar=0`} 
+                                                className="w-full flex-1 min-h-[600px] rounded-2xl border-2 border-gray-100 shadow-inner"
+                                                title="Exam PDF"
+                                            />
+                                        ) : (
+                                            <div className="relative group">
+                                                <img 
+                                                    src={`/storage/${pastQuestion.file_path}`} 
+                                                    alt="Past Question" 
+                                                    className="w-full rounded-2xl shadow-lg border border-gray-100"
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all rounded-2xl pointer-events-none"></div>
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="text-center py-20 text-gray-400 italic">
-                                        No text content available for this exam. Please use the download link or upload text.
+                                        No content or file available for this exam. Please upload a document or text.
                                     </div>
                                 )}
                             </div>
@@ -240,7 +308,7 @@ export default function SolvePage({ auth, pastQuestion }) {
                 </div>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .rounded-3xl { border-radius: 1.75rem; }
             `}</style>
         </AuthenticatedLayout>

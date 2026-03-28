@@ -10,18 +10,29 @@ class DeviceHelper
         $platform = 'Unknown';
         $deviceType = 'Desktop';
 
-        // Simple Platform Detection
-        if (preg_match('/linux/i', $userAgent)) {
-            $platform = 'Linux';
-        } elseif (preg_match('/macintosh|mac os x/i', $userAgent)) {
-            $platform = 'Mac';
+        // Prioritized Platform & Device Detection
+        if (preg_match('/android/i', $userAgent)) {
+            $platform = 'Android';
+            $deviceType = preg_match('/tablet|tab|ipad/i', $userAgent) ? 'Tablet' : 'Mobile';
+        } elseif (preg_match('/iphone|ipod/i', $userAgent)) {
+            $platform = 'iOS';
+            $deviceType = 'Mobile';
+        } elseif (preg_match('/ipad/i', $userAgent)) {
+            $platform = 'iOS';
+            $deviceType = 'Tablet';
         } elseif (preg_match('/windows|win32/i', $userAgent)) {
             $platform = 'Windows';
-        } elseif (preg_match('/iphone|ipad|ipod/i', $userAgent)) {
-            $platform = 'iOS';
-            $deviceType = preg_match('/ipad/i', $userAgent) ? 'Tablet' : 'Mobile';
-        } elseif (preg_match('/android/i', $userAgent)) {
-            $platform = 'Android';
+            $deviceType = 'Desktop';
+        } elseif (preg_match('/macintosh|mac os x/i', $userAgent)) {
+            $platform = 'Mac';
+            $deviceType = 'Desktop';
+        } elseif (preg_match('/linux/i', $userAgent)) {
+            $platform = 'Linux';
+            $deviceType = 'Desktop';
+        }
+
+        // Final sanity check for device type if platform was unknown
+        if ($deviceType === 'Desktop' && preg_match('/mobile/i', $userAgent)) {
             $deviceType = 'Mobile';
         }
 

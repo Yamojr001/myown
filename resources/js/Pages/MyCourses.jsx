@@ -13,7 +13,7 @@ export default function MyCourses({ auth, courses, flash }) {
     const [fileStatuses, setFileStatuses] = useState([]); // Array of { file, status, error, text }
     const fileInputRef = useRef(null);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, transform } = useForm({
         title: '', code: '', credit_unit: '', syllabus_text: '',
     });
 
@@ -53,13 +53,30 @@ export default function MyCourses({ auth, courses, flash }) {
 
         // Process each file
         for (const statusObj of newStatuses) {
-            const formData = new FormData();
-            formData.append('file', statusObj.file);
-
             try {
-                const response = await axios.post(route('courses.extract-text'), formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                let payload;
+                let headers = {};
+
+                // If file is > 1.5MB, use Base64 to bypass PHP's 2MB upload_max_filesize (8MB post_max_size usually allowed)
+                if (statusObj.file.size > 1.5 * 1024 * 1024 && statusObj.file.size < 6 * 1024 * 1024) {
+                    const base64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.readAsDataURL(statusObj.file);
+                    });
+                    payload = { 
+                        base64_file: base64,
+                        file_name: statusObj.file.name,
+                        mime_type: statusObj.file.type || 'application/pdf'
+                    };
+                    headers = { 'Content-Type': 'application/json' };
+                } else {
+                    payload = new FormData();
+                    payload.append('file', statusObj.file);
+                    headers = { 'Content-Type': 'multipart/form-data' };
+                }
+
+                const response = await axios.post(route('courses.extract-text'), payload, { headers });
 
                 if (response.data.success) {
                     setFileStatuses(prev => prev.map(item =>
@@ -96,15 +113,16 @@ export default function MyCourses({ auth, courses, flash }) {
 
         // Combine all extracted text
         const combinedText = fileStatuses.map(f => f.text).join("\n\n---\n\n");
-        setData('syllabus_text', combinedText);
+        
+        // Use transform to ensure the combined text is sent correctly even if setData is async
+        transform((data) => ({
+            ...data,
+            syllabus_text: combinedText,
+        }));
 
-        // Use a slight timeout to ensure state update propagated before post
-        setTimeout(() => {
-            post(route('courses.store'), {
-                data: { ...data, syllabus_text: combinedText }, // Explicitly pass the updated data to be safe
-                onSuccess: () => closeModal()
-            });
-        }, 100);
+        post(route('courses.store'), {
+            onSuccess: () => closeModal()
+        });
     };
 
     const renderCourseAction = (course) => {
@@ -123,7 +141,6 @@ export default function MyCourses({ auth, courses, flash }) {
             case 'Analyzing Syllabus...':
                 return <button disabled className="w-full text-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed font-semibold"><i className="fas fa-spinner fa-spin mr-2"></i>Analyzing...</button>;
             default:
-                // CORRECTED LINK: This now points to the new 'courses.show' route.
                 return <Link href={route('courses.show', course.id)} className="w-full text-center px-4 py-2 bg-brand-blue text-white rounded-lg hover:bg-opacity-80 font-semibold">View Progress</Link>;
         }
     };
@@ -209,12 +226,12 @@ export default function MyCourses({ auth, courses, flash }) {
                             id="files"
                             ref={fileInputRef}
                             multiple
-                            accept=".pdf, .png, .jpg, .jpeg, .txt, .ppt, .pptx"
+                            accept=".pdf, .png, .jpg, .jpeg, .txt, .ppt, .pptx, .docx"
                             className="mt-2 block w-full text-sm text-brand-secondary file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20 cursor-pointer"
                             onChange={handleFileChange}
                             disabled={fileStatuses.length >= 5 || isExtracting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Supported: PDF, PNG, JPG, TXT, PPTX (Max 15MB each)</p>
+                        <p className="text-xs text-gray-500 mt-2">Supported: PDF, DOCX, PNG, JPG, TXT, PPTX (Max 15MB each)</p>
 
                         {fileStatuses.length > 0 && (
                             <div className="mt-4 space-y-2">

@@ -131,11 +131,24 @@ class PastQuestionController extends Controller
     {
         $this->authorizePastQuestion($pastQuestion);
 
-        if (empty($pastQuestion->content)) {
-            return response()->json(['error' => 'No content available for AI processing.'], 400);
+        // If a file exists, we prefer Gemini Vision for better context/accuracy
+        if ($pastQuestion->file_path && Storage::disk('public')->exists($pastQuestion->file_path)) {
+            $fullPath = Storage::disk('public')->path($pastQuestion->file_path);
+            $mimeType = mime_content_type($fullPath) ?: 'application/pdf';
+            
+            // We pass the extracted content as additional context if it exists
+            $answers = $this->aiService->solvePastQuestionWithVision(
+                $fullPath, 
+                $mimeType, 
+                $pastQuestion->content
+            );
+        } else {
+            // Fallback to text-only if no file is available
+            if (empty($pastQuestion->content)) {
+                return response()->json(['error' => 'No content or file available for AI processing.'], 400);
+            }
+            $answers = $this->aiService->solvePastQuestion($pastQuestion->content);
         }
-
-        $answers = $this->aiService->solvePastQuestion($pastQuestion->content);
 
         return response()->json(['answers' => $answers]);
     }

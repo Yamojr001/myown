@@ -38,6 +38,18 @@ class DashboardController extends Controller
                                    })
                                    ->avg('score');
 
+        // 4. Get semester information from master timetable
+        $timetable = $user->masterTimetable;
+        $semesterInfo = null;
+        if ($timetable) {
+            $semesterInfo = [
+                'current_week' => $timetable->current_week,
+                'total_weeks' => $timetable->semester_duration_weeks,
+                'start_date' => $timetable->semester_start_date?->format('Y-m-d'),
+                'has_timetable' => true,
+            ];
+        }
+
         // Pass all this data as props to our React component
         return Inertia::render('Dashboard', [
             'recentCourses' => $recentCourses,
@@ -46,6 +58,7 @@ class DashboardController extends Controller
                 'totalCourses' => $totalCourses,
                 'averageScore' => round($averageScore), // Round to a whole number
             ],
+            'semesterInfo' => $semesterInfo,
         ]);
     }
 }

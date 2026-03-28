@@ -99,29 +99,64 @@ class CourseController extends Controller
      */
     public function extractText(Request $request)
     {
-        $request->validate([
-            'file' => 'required|file|max:15360|mimes:pdf,png,jpg,jpeg,txt,ppt,pptx|mimetypes:application/pdf,image/png,image/jpeg,text/plain,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        ]);
+        $file = null;
+        $isBase64 = false;
+        $extension = '';
 
-        $file = $request->file('file');
-        $mimeType = $file->getMimeType();
-        $extension = strtolower($file->getClientOriginalExtension());
+        if ($request->filled('base64_file')) {
+            $isBase64 = true;
+            $base64Data = $request->input('base64_file');
+            // Remove data URI prefix if present
+            if (preg_match('/^data:(\w+\/\w+);base64,/', $base64Data, $matches)) {
+                $mimeType = $matches[1];
+                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                $extension = strtolower(explode('/', $mimeType)[1] ?? 'pdf');
+            } else {
+                $mimeType = $request->input('mime_type', 'application/pdf');
+                $extension = 'pdf';
+            }
 
-        $realMimeType = mime_content_type($file->getRealPath()) ?: $mimeType;
-        $allowedMimeByExtension = [
-            'pdf' => ['application/pdf'],
-            'png' => ['image/png'],
-            'jpg' => ['image/jpeg'],
-            'jpeg' => ['image/jpeg'],
-            'txt' => ['text/plain'],
-            'ppt' => ['application/vnd.ms-powerpoint'],
-            'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
-        ];
+            $decodedData = base64_decode($base64Data);
+            $tempPath = tempnam(sys_get_temp_dir(), 'upl');
+            file_put_contents($tempPath, $decodedData);
+            
+            // Create a fake UploadedFile object or just pass the path
+            $filePath = $tempPath;
+            $fileName = $request->input('file_name', 'upload.pdf');
+        } else {
+            if ($request->file('file') && !$request->file('file')->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The uploaded file is invalid or exceeds the server limit. Error: ' . $request->file('file')->getErrorMessage()
+                ], 422);
+            }
 
-        if (!isset($allowedMimeByExtension[$extension]) || !in_array($realMimeType, $allowedMimeByExtension[$extension], true)) {
+            $validator = \Validator::make($request->all(), [
+                'file' => 'required|file|max:51200|mimes:pdf,png,jpg,jpeg,txt,ppt,pptx,pptm,docx',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all()),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $file = $request->file('file');
+            $filePath = $file->getRealPath();
+            $mimeType = $file->getMimeType();
+            $extension = strtolower($file->getClientOriginalExtension());
+            $fileName = $file->getClientOriginalName();
+        }
+
+        $realMimeType = mime_content_type($filePath) ?: $mimeType;
+        // Lenient mime check - trust the extension if it passed Laravel's validation
+        $allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg', 'txt', 'ppt', 'pptx', 'pptm', 'docx'];
+        if (!in_array($extension, $allowedExtensions)) {
             return response()->json([
                 'success' => false,
-                'message' => 'File type validation failed. Please upload a valid course document format.'
+                'message' => 'Invalid file extension: ' . $extension
             ], 422);
         }
 
@@ -131,27 +166,35 @@ class CourseController extends Controller
         
         try {
             if ($extension === 'txt' || $mimeType === 'text/plain') {
-                $extractedText = file_get_contents($file->getRealPath());
+                $extractedText = file_get_contents($filePath);
                 $pageCount = max(1, ceil(str_word_count($extractedText) / 250)); // Estimate 250 words per page
             } elseif (in_array($extension, ['png', 'jpg', 'jpeg'])) {
                 $aiService = new AiService();
-                $extractedText = $aiService->extractTextFromImage($file->getRealPath(), $mimeType);
+                $extractedText = $aiService->extractTextFromImage($filePath, $mimeType);
                 $pageCount = 1;
             } elseif ($extension === 'pdf') {
-                $parser = new Parser();
-                $pdf = $parser->parseFile($file->getRealPath());
-                $extractedText = $pdf->getText();
-                $pageCount = max(1, count($pdf->getPages()));
-                
-                // If PDF is mostly images, text will be very short. Use Gemini Vision as fallback.
-                if (strlen(trim($extractedText)) < 100) {
+                try {
+                    $parser = new Parser();
+                    $pdf = $parser->parseFile($filePath);
+                    $extractedText = $pdf->getText();
+                    $pageCount = max(1, count($pdf->getPages()));
+                    
+                    // If PDF is mostly images, text will be very short. Use Vision as fallback.
+                    if (strlen(trim($extractedText)) < 150) {
+                        $aiService = new AiService();
+                        $extractedText = $aiService->extractTextFromImage($filePath, 'application/pdf');
+                    }
+                } catch (\Exception $e) {
+                    \Log::info("PDF Parser failed for {$fileName}, falling back to Vision: " . $e->getMessage());
+                    // Fallback to Gemini Vision if parsing fails (could be scanned or protected)
                     $aiService = new AiService();
-                    $extractedText = $aiService->extractTextFromImage($file->getRealPath(), 'application/pdf');
+                    $extractedText = $aiService->extractTextFromImage($filePath, 'application/pdf');
+                    $pageCount = 1; // Approximate
                 }
             } elseif (in_array($extension, ['ppt', 'pptx'])) {
                 if ($extension === 'pptx') {
                     $zip = new \ZipArchive;
-                    if ($zip->open($file->getRealPath()) === true) {
+                    if ($zip->open($filePath) === true) {
                         for ($i = 0; $i < $zip->numFiles; $i++) {
                             $entry = $zip->getNameIndex($i);
                             if (strpos($entry, 'ppt/slides/slide') !== false && strpos($entry, '.xml') !== false) {
@@ -167,6 +210,22 @@ class CourseController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'Legacy .ppt files are not supported. Please convert to .pptx or PDF.'
+                    ], 422);
+                }
+            } elseif ($extension === 'docx') {
+                $zip = new \ZipArchive;
+                if ($zip->open($filePath) === true) {
+                    if (($index = $zip->locateName('word/document.xml')) !== false) {
+                        $data = $zip->getFromIndex($index);
+                        // Strip tags but add space for paragraphs/breaks
+                        $extractedText = strip_tags(str_replace(['<w:p', '<w:br', '<w:tab'], [' <w:p', ' <w:br', ' <w:tab'], $data));
+                        $pageCount = max(1, ceil(strlen($extractedText) / 3000)); // Rough estimate
+                    }
+                    $zip->close();
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to open DOCX file.'
                     ], 422);
                 }
             } else {

@@ -57,6 +57,14 @@ export default function Sidebar({ user, showing }) {
                         <i className="fas fa-book-reader w-6 mr-3 text-center"></i>
                         Reading Plan
                     </SidebarLink>
+                    <SidebarLink href={route('reading-handouts.index')} active={isActive('reading-handouts.index')}>
+                        <i className="fas fa-file-lines w-6 mr-3 text-center"></i>
+                        Reading Handouts
+                    </SidebarLink>
+                    <SidebarLink href={route('study-room.index')} active={isActive('study-room.index')}>
+                        <i className="fas fa-graduation-cap w-6 mr-3 text-center"></i>
+                        My Study Room
+                    </SidebarLink>
                     <SidebarLink href={route('tutor.show')} active={isActive('tutor.show')}>
                         <i className="fas fa-chalkboard-teacher w-6 mr-3 text-center"></i>
                         AI Tutor

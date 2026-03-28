@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
             'test_alert' => fn () => $request->user() ? app(\App\Services\ProactiveStudyService::class)->getActiveTestAlert($request->user()) : null,
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),
+                'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
         ];

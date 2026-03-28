@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Cache;
 class Course extends Model
 {
     use HasFactory;
-    protected $fillable = [ 'user_id', 'semester_id', 'title', 'code', 'credit_unit', 'file_path', 'page_count', 'topics', 'status', 'progress', 'reading_plan' ];
+    protected $fillable = [ 'user_id', 'semester_id', 'title', 'code', 'credit_unit', 'file_path', 'page_count', 'topics', 'status', 'progress', 'reading_plan', 'generated_handout', 'handout_generated_at' ];
     protected $casts = [ 'topics' => 'array', 'reading_plan' => 'array' ];
 
     public function semester(): BelongsTo { return $this->belongsTo(Semester::class); }

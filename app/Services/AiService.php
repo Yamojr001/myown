@@ -6,7 +6,9 @@ use Smalot\PdfParser\Parser;
 use GuzzleHttp\Exception\ClientException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Mail\AiApiErrorMail;
 
 class AiService {
     private $apiKey;
@@ -93,7 +95,7 @@ class AiService {
                                 'X-Request-Id' => $requestId,
                             ],
                             'json' => $payload,
-                            'timeout' => 60,
+                            'timeout' => 180,
                         ]);
 
                         $body = json_decode($response->getBody()->getContents(), true);
@@ -116,6 +118,7 @@ class AiService {
             return "";
         } catch (\Exception $e) {
             \Log::error('AI Service Image/PDF Text Extraction Failed: ' . $e->getMessage());
+            $this->notifyAdminOfError($e, 'Vision/Extraction');
             throw $e;
         }
     }
@@ -907,14 +910,15 @@ WEAK TOPICS: [{$weakTopicsList}]";
         return $cleaned;
     }
 
-    private function callGemini($prompt, $timeout = 45, $maxOutputTokens = null, $mimeType = 'application/json') {
-        if (!$this->allowUsage()) {
-            \Log::warning('AI Service usage limit reached', [
-                'user_id' => Auth::id(),
-                'ip' => request()?->ip(),
-            ]);
-            return null;
-        }
+    public function callGemini($prompt, $timeout = 45, $maxOutputTokens = null, $mimeType = 'application/json') {
+        // Token limit check removed - allowing full usage
+        // if (!$this->allowUsage()) {
+        //     \Log::warning('AI Service usage limit reached', [
+        //         'user_id' => Auth::id(),
+        //         'ip' => request()?->ip(),
+        //     ]);
+        //     return null;
+        // }
 
         $requestId = (string) Str::uuid();
         $models = [self::PRIMARY_MODEL, (string) config('services.gemini.fallback_model', self::FALLBACK_MODEL)];
@@ -993,6 +997,7 @@ WEAK TOPICS: [{$weakTopicsList}]";
             \Log::error('General network error calling Gemini: ' . $e->getMessage(), [
                 'request_id' => $requestId,
             ]);
+            $this->notifyAdminOfError($e, implode(', ', $models));
             return null;
         }
     }
@@ -1011,6 +1016,25 @@ WEAK TOPICS: [{$weakTopicsList}]";
         }
 
         return $count <= $limit;
+    }
+
+    /**
+     * Notify the administrator when an AI API error occurs.
+     * Uses cache to throttle emails once every 30 minutes.
+     */
+    private function notifyAdminOfError(\Exception $e, string $model = 'Unknown')
+    {
+        $cacheKey = 'ai_api_error_notified';
+        
+        if (!Cache::has($cacheKey)) {
+            try {
+                Mail::to('yamojr001@gmail.com')->send(new AiApiErrorMail($e->getMessage(), $model));
+                // Throttle for 30 minutes
+                Cache::put($cacheKey, true, now()->addMinutes(30));
+            } catch (\Exception $mailEx) {
+                \Log::error('Failed to send AI API Error Email: ' . $mailEx->getMessage());
+            }
+        }
     }
     
     /**
@@ -1031,6 +1055,86 @@ WEAK TOPICS: [{$weakTopicsList}]";
         \"\"\"{$content}\"\"\"";
 
         return $this->callGemini($prompt, 60, 8192, 'text/plain');
+    }
+
+    /**
+     * Solves a past question using Vision (Image/PDF) and optional text context.
+     */
+    public function solvePastQuestionWithVision(string $filePath, string $mimeType, ?string $additionalContext = null)
+    {
+        try {
+            if (!file_exists($filePath)) return "Error: File not found for AI processing.";
+            
+            $base64Data = base64_encode(file_get_contents($filePath));
+            $prompt = "You are an expert academic assistant. Analyze this examination paper (Image/PDF) and solve ALL the questions found within it.
+            
+            RULES:
+            1. Extract every question accurately from the document.
+            2. Provide clear, accurate, and concise answers for every question.
+            3. Format your response in a clear, readable Markdown format (e.g., Q1: Answer, Q2: Answer...).
+            4. If there are multiple-choice questions, provide the correct option and a brief explanation.
+            5. If there are essay questions, provide a concise model answer.
+            6. Return ONLY the Markdown answer text.";
+
+            if ($additionalContext) {
+                $prompt .= "\n\nAdditional Context/OCR Text: \"\"\"{$additionalContext}\"\"\"";
+            }
+
+            $requestId = (string) \Illuminate\Support\Str::uuid();
+            $payload = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt],
+                            ['inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data' => $base64Data,
+                            ]],
+                        ],
+                    ],
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.2,
+                    'maxOutputTokens' => 8192,
+                ],
+            ];
+
+            $models = [self::PRIMARY_MODEL, (string) config('services.gemini.fallback_model', self::FALLBACK_MODEL)];
+            foreach ($models as $model) {
+                for ($attempt = 1; $attempt <= 3; $attempt++) {
+                    try {
+                        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->apiKey;
+                        $response = $this->client->post($apiUrl, [
+                            'headers' => [
+                                'Content-Type' => 'application/json',
+                                'X-Request-Id' => $requestId,
+                            ],
+                            'json' => $payload,
+                            'timeout' => 120,
+                        ]);
+
+                        $body = json_decode($response->getBody()->getContents(), true);
+                        if (isset($body['candidates'][0]['content']['parts'][0]['text'])) {
+                            return $body['candidates'][0]['content']['parts'][0]['text'];
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::warning('Multimodal solve retry failed', [
+                            'request_id' => $requestId,
+                            'model' => $model,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                    usleep(random_int(200000, 900000));
+                }
+            }
+
+            return "Error: AI Solver failed to process the document after multiple attempts.";
+        } catch (\Exception $e) {
+            \Log::error('AI Service Multimodal Solve Failed: ' . $e->getMessage());
+            $this->notifyAdminOfError($e, 'VisionSolve');
+            return "Error: " . $e->getMessage();
+        }
     }
 
     /**
@@ -1146,5 +1250,62 @@ WEAK TOPICS: [{$weakTopicsList}]";
         }
         
         return implode("\n", $constraints);
+    }
+
+    public function explainText(string $text)
+    {
+        try {
+            $prompt = "You are an expert academic tutor. Explain the following text in a way that is easy to understand for a university student. Keep the explanation concise but thorough. 
+            
+            TEXT:
+            \"{$text}\"
+            
+            Return ONLY the explanation text.";
+
+            return $this->callGemini($prompt, 60, null, 'text/plain');
+        } catch (\Exception $e) {
+            \Log::error('AI Service Explain Text Failed: ' . $e->getMessage());
+            $this->notifyAdminOfError($e, 'ExplainText');
+            return null;
+        }
+    }
+
+    public function generateMiniTest(string $content, int $count = 10)
+    {
+        try {
+            $prompt = "You are an expert exam generator. Based on the following COURSE CONTENT, create a {$count}-question mini-test for a university student.
+            
+            TYPES OF QUESTIONS:
+            - Multiple Choice (Objective)
+            - Fill-in-the-blank
+            - Short Essay/Explanation
+            
+            JSON RULES:
+            - Return a single valid JSON object with a key 'questions'.
+            - Each question object must have: 
+                - 'type': ('objective', 'fill_in', 'essay')
+                - 'question': The question text
+                - 'options': array of 4 strings (only for objective)
+                - 'correct_answer_index': integer (only for objective)
+                - 'correct_answer': string (for fill_in and objective)
+            - Do not add any introductory or concluding text. Return ONLY the JSON.
+            
+            COURSE CONTENT:
+            \"" . substr($content, 0, 80000) . "\"";
+
+            $responseContent = $this->cleanJsonResponse($this->callGemini($prompt, 120));
+            $data = json_decode($responseContent, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                \Log::error('AI Service Mini Test JSON Decode Error: ' . json_last_error_msg());
+                return null;
+            }
+
+            return $data;
+        } catch (\Exception $e) {
+            \Log::error('AI Service Mini Test Generation Failed: ' . $e->getMessage());
+            $this->notifyAdminOfError($e, 'MiniTest');
+            return null;
+        }
     }
 }

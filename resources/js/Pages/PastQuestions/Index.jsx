@@ -160,7 +160,7 @@ export default function Index({ auth, pastQuestions, universities, filters }) {
             </div>
 
             {/* Premium Styles */}
-            <style jsx>{`
+            <style>{`
                 .rounded-2xl { border-radius: 1.25rem; }
                 .rounded-3xl { border-radius: 2rem; }
                 .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }

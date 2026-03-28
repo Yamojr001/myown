@@ -11,6 +11,7 @@ use App\Http\Controllers\ReadingPlanController; // <-- IMPORT
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\PastQuestionController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\StudyRoomController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -82,7 +83,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Reading Plan Route
     Route::get('/reading-plan', [ReadingPlanController::class, 'index'])->name('reading-plan.index');
+    Route::get('/reading-handouts', [ReadingPlanController::class, 'handouts'])->name('reading-handouts.index');
     Route::post('/reading-plan/{course}/generate', [ReadingPlanController::class, 'generate'])->middleware('throttle:ai-heavy')->name('reading-plan.generate');
+    Route::post('/reading-handouts/{course}/generate', [ReadingPlanController::class, 'generateHandout'])->middleware('throttle:ai-heavy')->name('reading-handouts.generate');
     Route::get('/reading-plan/{course}/view', [ReadingPlanController::class, 'showDetailed'])->name('reading-plan.show');
     Route::get('/reading-plan/{course}/download-handout', [ReadingPlanController::class, 'downloadHandout'])->name('reading-plan.download-handout');
 
@@ -107,6 +110,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Review & Suggestion Routes
     Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+
+    // Study Room Routes
+    Route::get('/study-room', [StudyRoomController::class, 'index'])->name('study-room.index');
+    Route::get('/study-room/{course}', [StudyRoomController::class, 'show'])->name('study-room.show');
+    Route::post('/study-room/explain', [StudyRoomController::class, 'explain'])->middleware('throttle:ai-heavy')->name('study-room.explain');
+    Route::post('/study-room/{course}/generate-test', [StudyRoomController::class, 'generateTest'])->middleware('throttle:ai-heavy')->name('study-room.generate-test');
+    Route::post('/study-room/submit-test', [StudyRoomController::class, 'submitTest'])->name('study-room.submit-test');
+    Route::post('/study-room/toggle-task', [StudyRoomController::class, 'toggleTask'])->name('study-room.toggle-task');
 });
 
 // Admin-Only Routes

@@ -1,5 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Index({ auth, stats }) {
@@ -7,6 +7,7 @@ export default function Index({ auth, stats }) {
         subject: '',
         content: '',
     });
+    const { flash } = usePage().props;
 
     const [preview, setPreview] = useState(false);
 
@@ -14,9 +15,9 @@ export default function Index({ auth, stats }) {
         e.preventDefault();
         if (confirm(`Broadcasting to ${stats.total_subscribers} scholars. Proceed?`)) {
             post(route('admin.newsletter.send'), {
-                onSuccess: () => {
+                onSuccess: (page) => {
                     reset();
-                    alert('Broadcast initiated successfully!');
+                    alert(page?.props?.flash?.success || 'Broadcast initiated successfully!');
                 },
             });
         }
@@ -27,6 +28,17 @@ export default function Index({ auth, stats }) {
             <Head title="Newsletter Broadcast" />
 
             <div className="py-12 px-4 sm:px-8 lg:px-12">
+                {flash?.success && (
+                    <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-bold text-green-800">
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-800">
+                        {flash.error}
+                    </div>
+                )}
+
                 <div className="mb-12 flex justify-between items-end">
                     <div>
                         <h2 className="text-3xl font-black text-brand-dark tracking-tight uppercase mb-2">Newsletter Broadcast</h2>

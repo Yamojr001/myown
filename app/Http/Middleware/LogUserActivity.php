@@ -21,6 +21,8 @@ class LogUserActivity
         'refresh_token',
         'email',
         'phone_number',
+        'base64_file',
+        'file',
     ];
 
     /**

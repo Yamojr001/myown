@@ -7,6 +7,11 @@ export default function Show({ auth }) {
     const [isReading, setIsReading] = useState(false);
     const [isRepeating, setIsRepeating] = useState(false);
     const [speechError, setSpeechError] = useState('');
+    const [selectedVoice, setSelectedVoice] = useState('');
+    const [speechRate, setSpeechRate] = useState(1);
+    const [pitch, setPitch] = useState(1);
+    const [volume, setVolume] = useState(1);
+    const [availableVoices, setAvailableVoices] = useState([]);
 
     // Use a ref to keep track of the repeat state inside the onend callback
     const isRepeatingRef = useRef(isRepeating);
@@ -31,7 +36,20 @@ export default function Show({ auth }) {
         synthRef.current = synth;
 
         const loadVoices = () => {
-            voicesRef.current = synth.getVoices();
+            const voices = synth.getVoices();
+            voicesRef.current = voices;
+            setAvailableVoices(voices);
+            // Set default to first English voice if not already set
+            if (!selectedVoice && voices.length > 0) {
+                const englishVoice = voices.find((voice) =>
+                    voice.lang?.toLowerCase().startsWith('en')
+                );
+                if (englishVoice) {
+                    setSelectedVoice(englishVoice.voiceURI);
+                } else {
+                    setSelectedVoice(voices[0].voiceURI);
+                }
+            }
         };
 
         loadVoices();
@@ -100,16 +118,29 @@ export default function Show({ auth }) {
             const utterance = new SpeechSynthesisUtterance(chunkText);
             utteranceRef.current = utterance;
 
-            const englishVoice = voicesRef.current.find((voice) =>
-                voice.lang?.toLowerCase().startsWith('en')
-            );
-
-            if (englishVoice) {
-                utterance.voice = englishVoice;
-                utterance.lang = englishVoice.lang;
+            // Apply voice settings
+            if (selectedVoice) {
+                const selectedVoiceObj = voicesRef.current.find((v) => v.voiceURI === selectedVoice);
+                if (selectedVoiceObj) {
+                    utterance.voice = selectedVoiceObj;
+                    utterance.lang = selectedVoiceObj.lang;
+                }
             } else {
-                utterance.lang = 'en-US';
+                const englishVoice = voicesRef.current.find((voice) =>
+                    voice.lang?.toLowerCase().startsWith('en')
+                );
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                    utterance.lang = englishVoice.lang;
+                } else {
+                    utterance.lang = 'en-US';
+                }
             }
+
+            // Apply speech rate, pitch, and volume
+            utterance.rate = speechRate;
+            utterance.pitch = pitch;
+            utterance.volume = volume;
 
             if (currentChunkIndex === 0) {
                 setIsReading(true);
@@ -177,13 +208,106 @@ export default function Show({ auth }) {
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold text-brand-text mb-6">Read Aloud</h1>
                     <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 border-t-4 border-brand-blue">
+                        {/* Voice & Speed Settings */}
+                        <div className="mb-8 bg-gray-50 rounded-lg p-5 border border-gray-200">
+                            <h2 className="text-lg font-black text-brand-text mb-4">Voice & Speed Settings</h2>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Voice Selection */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-microphone mr-2 text-brand-blue"></i>
+                                        Voice
+                                    </label>
+                                    <select
+                                        value={selectedVoice}
+                                        onChange={(e) => setSelectedVoice(e.target.value)}
+                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-blue focus:ring-brand-blue px-3 py-2 border"
+                                    >
+                                        {availableVoices.map((voice, idx) => (
+                                            <option key={idx} value={voice.voiceURI}>
+                                                {voice.name} {voice.lang ? `(${voice.lang})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Speech Rate */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-tachometer-alt mr-2 text-brand-blue"></i>
+                                        Reading Speed: {speechRate.toFixed(1)}x
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        value={speechRate}
+                                        onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                                        <span>0.5x (Slow)</span>
+                                        <span>Normal</span>
+                                        <span>2x (Fast)</span>
+                                    </div>
+                                </div>
+
+                                {/* Pitch */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-wave-square mr-2 text-brand-blue"></i>
+                                        Pitch: {pitch.toFixed(1)}
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0.5"
+                                        max="2"
+                                        step="0.1"
+                                        value={pitch}
+                                        onChange={(e) => setPitch(parseFloat(e.target.value))}
+                                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                                        <span>Low</span>
+                                        <span>Normal</span>
+                                        <span>High</span>
+                                    </div>
+                                </div>
+
+                                {/* Volume */}
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        <i className="fas fa-volume-up mr-2 text-brand-blue"></i>
+                                        Volume: {Math.round(volume * 100)}%
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1"
+                                        step="0.1"
+                                        value={volume}
+                                        onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                        className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                                        <span>Silent</span>
+                                        <span>Normal</span>
+                                        <span>Loud</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Text Input */}
                         <label className="block text-sm font-bold text-gray-700 mb-3">
                             Paste text to be read aloud:
                         </label>
                         <textarea
                             value={text}
                             onChange={e => setText(e.target.value)}
-                            className="w-full h-64 rounded-md border-gray-300 shadow-sm focus:border-brand-blue focus:ring-brand-blue p-4"
+                            className="w-full h-64 rounded-md border-gray-300 shadow-sm focus:border-brand-blue focus:ring-brand-blue p-4 border"
                             placeholder="Paste text here..."
                         ></textarea>
 

@@ -137,13 +137,51 @@ class AdminController extends Controller
             'content' => 'required|string',
         ]);
 
-        $subscribers = \App\Models\User::where('subscribed_to_newsletter', true)->get();
+        $subscribers = \App\Models\User::query()
+            ->where('subscribed_to_newsletter', true)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->get();
 
-        foreach ($subscribers as $subscriber) {
-            \Illuminate\Support\Facades\Mail::to($subscriber->email)
-                ->queue(new \App\Mail\NewsletterMail($request->subject, $request->content, $subscriber));
+        if ($subscribers->isEmpty()) {
+            return back()->with('error', 'No subscribed users with valid email addresses were found.');
         }
 
-        return back()->with('success', "Newsletter broadcast initiated to {$subscribers->count()} scholars.");
+        $totalSubscribers = $subscribers->count();
+        $sentCount = 0;
+        $failedCount = 0;
+
+        foreach ($subscribers as $subscriber) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($subscriber->email)
+                    ->send(new \App\Mail\NewsletterMail($request->subject, $request->content, $subscriber));
+                $sentCount++;
+
+                \Log::info('Newsletter sent attempt accepted by SMTP', [
+                    'user_id' => $subscriber->id,
+                    'email' => $subscriber->email,
+                ]);
+            } catch (\Throwable $e) {
+                $failedCount++;
+                \Log::error('Newsletter send failed for subscriber', [
+                    'user_id' => $subscriber->id,
+                    'email' => $subscriber->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $message = "Newsletter broadcast complete. Sent to {$sentCount} of {$totalSubscribers} subscribed user(s).";
+        if ($failedCount > 0) {
+            $message .= " Failed: {$failedCount}.";
+        }
+
+        \Log::info('Newsletter broadcast summary', [
+            'total_subscribers' => $totalSubscribers,
+            'sent' => $sentCount,
+            'failed' => $failedCount,
+        ]);
+
+        return back()->with('success', $message);
     }
 }

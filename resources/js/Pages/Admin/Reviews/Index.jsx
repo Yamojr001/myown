@@ -87,7 +87,7 @@ export default function Index({ auth, reviews }) {
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-10 border-b border-gray-700">
                                         <div className="flex items-center gap-4">
                                             <div className="w-16 h-16 bg-brand-blue rounded-2xl flex items-center justify-center text-white text-2xl font-black">
-                                                {review.user?.name ? review.user.name[0].toUpperCase() : '?'}
+                                                {selectedReview.user?.name ? selectedReview.user.name[0].toUpperCase() : '?'}
                                             </div>
                                             <div>
                                                 <h2 className="text-2xl font-black text-white leading-none">{selectedReview.user?.name}</h2>
