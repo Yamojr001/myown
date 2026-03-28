@@ -50,6 +50,9 @@ class DashboardController extends Controller
             ];
         }
 
+        // 5. Fetch active system notifications
+        $systemNotifications = \App\Models\SystemNotification::active()->latest()->get();
+
         // Pass all this data as props to our React component
         return Inertia::render('Dashboard', [
             'recentCourses' => $recentCourses,
@@ -59,6 +62,7 @@ class DashboardController extends Controller
                 'averageScore' => round($averageScore), // Round to a whole number
             ],
             'semesterInfo' => $semesterInfo,
+            'systemNotifications' => $systemNotifications,
         ]);
     }
 }

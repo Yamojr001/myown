@@ -35,33 +35,68 @@ class ReadingPlanController extends Controller
             $readingPlan = $this->normalizeReadingPlan($course->reading_plan);
             $timetableData = $timetable->weekly_schedule ?? [];
 
-            // Build prompt for AI handout generation
-            $topicsText = !empty($courseData['topics']) ? implode(', ', $courseData['topics']) : 'General course topics';
-            $readingPlanText = !empty($readingPlan) ? json_encode($readingPlan) : 'No structured plan available';
+            // Build a literal map of the schedule for the AI to see the slots
+            $scheduleSummary = "";
+            $weeklyDayMap = []; // [week_1 => [Monday, Tuesday], week_2 => [Monday, Wednesday]]
+            $dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             
-            $prompt = "You are an expert educational content creator. Using the provided course information, generate a comprehensive, well-structured reading handout organized by weekly days (Monday-Friday) for {$course->title} ({$course->code}).
+            foreach ($timetableData as $weekKey => $weekData) {
+                if (!is_array($weekData)) continue;
+                
+                $weekNum = (int) str_replace('week_', '', $weekKey);
+                foreach ($dayOrder as $day) {
+                    $lowerDay = strtolower($day);
+                    $dayKey = isset($weekData[$day]) ? $day : (isset($weekData[$lowerDay]) ? $lowerDay : null);
+                    if (!$dayKey || !is_array($weekData[$dayKey])) continue;
+                    
+                    foreach ($weekData[$dayKey] as $slot) {
+                        $slotCourse = $slot['course'] ?? $slot['title'] ?? $slot['course_title'] ?? '';
+                        $match = false;
+                        if (!empty($course->title) && stripos($slotCourse, $course->title) !== false) $match = true;
+                        if (!empty($course->code) && stripos($slotCourse, $course->code) !== false) $match = true;
+
+                        if ($match) {
+                            $scheduleSummary .= "- Week {$weekNum}, {$day}: {$slot['time']} ({$slot['topic']})\n";
+                            $weeklyDayMap[$weekNum][] = $lowerDay;
+                        }
+                    }
+                }
+                if (isset($weeklyDayMap[$weekNum])) {
+                    $weeklyDayMap[$weekNum] = array_values(array_unique($weeklyDayMap[$weekNum]));
+                }
+            }
+
+            // FALLBACK: If No slots found, use standard Mon-Fri
+            if (empty($scheduleSummary)) {
+                $scheduleSummary = "GENERAL STUDY SCHEDULE (Course not found in timetable, using standard weeks):\n";
+                for ($i = 1; $i <= $timetable->semester_duration_weeks; $i++) {
+                    $scheduleSummary .= "- Week {$i}: Monday, Tuesday, Wednesday, Thursday, Friday (2 hours daily)\n";
+                }
+            }
+
+            $prompt = "You are an expert educational content creator. Using the provided course information and study timetable, generate a comprehensive reading handout for {$course->title} ({$course->code}).
+
+STRICT REQUIREMENT: You MUST ONLY generate study content for the EXACT weeks and days listed in the STUDENT STUDY SCHEDULE below. 
+- If a week is not listed, do not generate for it.
+- If a day (e.g. Wednesday) is not listed for a specific week, DO NOT generate a reading for that day in that week.
 
 COURSE INFORMATION:
 - Title: {$course->title}
 - Code: {$course->code}
-- Topics: {$topicsText}
 - Semester Duration: {$timetable->semester_duration_weeks} weeks
 
-READING PLAN (if available):
-{$readingPlanText}
+STUDENT STUDY SCHEDULE (Weeks/Days allocated for this course):
+{$scheduleSummary}
 
-COURSE CONTENT (use this as the primary source):
+COURSE CONTENT (primary source):
 " . substr($courseData['full_content'] ?? '', 0, 150000) . "
 
 REQUIREMENTS:
-1. Create a structured handout with entries for each week (Week 1 through Week {$timetable->semester_duration_weeks})
-2. For each week, provide readings for Monday through Friday
-3. Each daily segment should include:
-   - A focus area or key topic
-   - 3-5 bullet points covering main concepts
-   - 2-3 recommended tasks (Read, Take notes, Summarize, etc.)
-4. Ensure content is evenly distributed across all weeks
-5. Base all content primarily on the provided course material
+1. Create a structured handout with entries for each week mentioned in the STUDY SCHEDULE.
+2. For each week, provide readings ONLY for the specific days found in the STUDY SCHEDULE for that week.
+3. Distribution: Evenly divide the course content across all scheduled slots.
+4. Each daily entry MUST have a 'focus' (string), 'points' (array of strings), and 'tasks' (array of strings).
+5. Ensure content is logically progressive and covers the entire course material by the final week.
 
 Return your response as a single valid JSON object with this structure:
 {
@@ -69,19 +104,17 @@ Return your response as a single valid JSON object with this structure:
     {
       \"week_number\": 1,
       \"days\": {
-        \"monday\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]},
-        \"tuesday\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]},
-        \"wednesday\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]},
-        \"thursday\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]},
-        \"friday\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]}
+        \"day_from_schedule\": {\"focus\": \"...\", \"points\": [...], \"tasks\": [...]}
       }
     }
   ]
 }
 
+IMPORTANT: The 'days' object for each week MUST ONLY contain keys for the days scheduled for THAT specific week (e.g., 'monday', 'tuesday').
+
 Return ONLY the JSON object, no additional text.";
 
-            $responseContent = $aiService->callGemini($prompt, 180, null);
+            $responseContent = $aiService->cleanJsonResponse($aiService->callGemini($prompt, 180, null));
 
             if (!$responseContent) {
                 return back()->with('error', 'Failed to generate handout. Please try again.');
@@ -366,8 +399,14 @@ Return ONLY the JSON object, no additional text.";
     /**
      * Convert normalized weekly data into a flat daily handout list.
      */
-    private function buildDailyHandouts($course, array $readingPlan): array
+    private function buildDailyHandouts($course, $readingPlan, $timetable = null): array
     {
+        // If we have AI-generated weeks, prioritize them
+        if (isset($readingPlan['weeks']) && is_array($readingPlan['weeks'])) {
+            return $readingPlan['weeks'];
+        }
+
+        // Fallback to existing logic if it's the old format
         if (!empty($readingPlan)) {
             $weeks = array_keys($readingPlan);
             usort($weeks, function ($a, $b) {
@@ -541,5 +580,36 @@ Return ONLY the JSON object, no additional text.";
         }
 
         return $blocks;
+    }
+
+    /**
+     * Get unique study days for a course from the Master Timetable.
+     */
+    private function getCourseStudyDays(array $weeklySchedule, string $courseTitle): array
+    {
+        $daysFound = [];
+        $dayOrder = [
+            'monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 
+            'friday' => 5, 'saturday' => 6, 'sunday' => 7
+        ];
+
+        foreach ($weeklySchedule as $weekData) {
+            if (!is_array($weekData)) continue;
+            
+            foreach ($weekData as $day => $slots) {
+                $lowerDay = strtolower($day);
+                if (!is_array($slots) || !isset($dayOrder[$lowerDay])) continue;
+                
+                foreach ($slots as $slot) {
+                    $slotCourse = $slot['course'] ?? $slot['title'] ?? $slot['course_title'] ?? '';
+                    if (!empty($courseTitle) && stripos($slotCourse, $courseTitle) !== false) {
+                        $daysFound[$lowerDay] = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return array_keys($daysFound);
     }
 }

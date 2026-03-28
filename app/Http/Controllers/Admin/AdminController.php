@@ -184,4 +184,37 @@ class AdminController extends Controller
 
         return back()->with('success', $message);
     }
+
+    public function notifications()
+    {
+        return Inertia::render('Admin/Notifications/Index', [
+            'notifications' => \App\Models\SystemNotification::with('user:id,name')->latest()->paginate(10),
+        ]);
+    }
+
+    public function sendNotification(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'content' => 'required|string',
+            'type' => 'required|in:info,success,warning,danger',
+        ]);
+
+        \App\Models\SystemNotification::create([
+            'user_id' => auth()->id(),
+            'title' => $validated['title'],
+            'content' => $validated['content'],
+            'type' => $validated['type'],
+            // Auto-delete after 10 days
+            'expires_at' => now()->addDays(10),
+        ]);
+
+        return back()->with('success', 'System notification broadcasted successfully and will expire in 10 days.');
+    }
+
+    public function deleteNotification(\App\Models\SystemNotification $notification)
+    {
+        $notification->delete();
+        return back()->with('success', 'Notification deleted.');
+    }
 }

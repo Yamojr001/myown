@@ -58,48 +58,59 @@ export default function Handouts({ auth, courses }) {
                         <div key={weekIdx} className="border-t border-gray-200 pt-4">
                             <h3 className="mb-4 text-lg font-black text-brand-blue">Week {week.week_number}</h3>
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map((dayKey) => {
+                                {Object.keys(week.days || {}).sort((a, b) => {
+                                    const order = { 'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7 };
+                                    return (order[a.toLowerCase()] || 99) - (order[b.toLowerCase()] || 99);
+                                }).map((dayKey) => {
                                     const dayData = week.days?.[dayKey];
                                     if (!dayData) return null;
 
                                     const dayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
 
                                     return (
-                                        <article key={`${week.week_number}-${dayKey}`} className="rounded-lg border border-blue-100 bg-blue-50 p-4">
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <h4 className="text-sm font-black text-brand-blue">
-                                                    {dayName}
-                                                </h4>
-                                                <span className="rounded-full bg-brand-blue/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-blue">
-                                                    AI Generated
+                                        <article key={`${week.week_number}-${dayKey}`} className="rounded-2xl border border-brand-blue/10 bg-brand-blue/[0.02] p-6 shadow-sm hover:shadow-md transition-all">
+                                            <div className="mb-4 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue">
+                                                        <i className="fas fa-calendar-day text-xs"></i>
+                                                    </div>
+                                                    <h4 className="text-sm font-black text-brand-blue uppercase tracking-widest">
+                                                        {dayName}
+                                                    </h4>
+                                                </div>
+                                                <span className="rounded-full bg-green-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-green-600">
+                                                    AI Tailored
                                                 </span>
                                             </div>
 
                                             {dayData.focus && (
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-secondary">
-                                                    Focus: {dayData.focus}
-                                                </p>
+                                                <div className="mb-4 bg-white/50 p-3 rounded-xl border border-brand-blue/5">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Focus Area</p>
+                                                    <p className="text-sm font-bold text-gray-700 leading-tight">
+                                                        {dayData.focus}
+                                                    </p>
+                                                </div>
                                             )}
 
                                             {Array.isArray(dayData.points) && dayData.points.length > 0 && (
-                                                <ul className="mb-3 space-y-1">
+                                                <div className="space-y-2 mb-4">
                                                     {dayData.points.map((point, pointIdx) => (
-                                                        <li key={pointIdx} className="text-sm leading-relaxed text-brand-text">
-                                                            <span className="mr-1 font-bold text-brand-blue">•</span>
+                                                        <div key={pointIdx} className="flex gap-3 text-sm leading-relaxed text-gray-600">
+                                                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand-blue/30 shrink-0"></div>
                                                             {point}
-                                                        </li>
+                                                        </div>
                                                     ))}
-                                                </ul>
+                                                </div>
                                             )}
 
                                             {Array.isArray(dayData.tasks) && dayData.tasks.length > 0 && (
-                                                <div className="mt-3 space-y-1 border-t border-blue-200 pt-3">
-                                                    <p className="text-xs font-bold uppercase tracking-wider text-brand-secondary">Tasks:</p>
+                                                <div className="mt-6 pt-5 border-t border-brand-blue/5 space-y-3">
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Daily Tasks</p>
                                                     {dayData.tasks.map((task, taskIdx) => (
-                                                        <p key={taskIdx} className="text-xs text-brand-text">
-                                                            <input type="checkbox" className="mr-2" />
-                                                            {task}
-                                                        </p>
+                                                        <label key={taskIdx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-brand-blue/5 transition-colors cursor-pointer group">
+                                                            <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue/20 cursor-pointer" />
+                                                            <span className="text-xs text-gray-500 group-hover:text-gray-700 transition-colors font-semibold">{task}</span>
+                                                        </label>
                                                     ))}
                                                 </div>
                                             )}

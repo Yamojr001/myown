@@ -137,6 +137,11 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::get('/reviews', [\App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('reviews.index');
     Route::post('/reviews/{review}/read', [\App\Http\Controllers\Admin\ReviewController::class, 'markAsRead'])->name('reviews.read');
     Route::delete('/reviews/{review}', [\App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('reviews.delete');
+
+    // Admin System Notifications
+    Route::get('/notifications', [\App\Http\Controllers\Admin\AdminController::class, 'notifications'])->name('notifications');
+    Route::post('/notifications', [\App\Http\Controllers\Admin\AdminController::class, 'sendNotification'])->name('notifications.send');
+    Route::delete('/notifications/{notification}', [\App\Http\Controllers\Admin\AdminController::class, 'deleteNotification'])->name('notifications.delete');
 });
 
 // Newsletter Unsubscription

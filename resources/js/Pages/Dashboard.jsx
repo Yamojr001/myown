@@ -42,6 +42,46 @@ export default function Dashboard({ auth, recentCourses, latestTest, stats, seme
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
 
+                    {/* System Announcements */}
+                    {systemNotifications && systemNotifications.length > 0 && (
+                        <div className="mb-8 space-y-4">
+                            {systemNotifications.map((notif) => (
+                                <div 
+                                    key={notif.id} 
+                                    className={`p-5 rounded-3xl border shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 overflow-hidden relative ${
+                                        notif.type === 'danger' ? 'bg-red-50 border-red-100 text-red-900' :
+                                        notif.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-900' :
+                                        notif.type === 'success' ? 'bg-green-50 border-green-100 text-green-900' :
+                                        'bg-brand-blue/5 border-brand-blue/10 text-brand-blue'
+                                    }`}
+                                >
+                                    {/* Glass reflection effect */}
+                                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none"></div>
+                                    
+                                    <div className="flex items-start gap-4 relative z-10">
+                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                                            notif.type === 'danger' ? 'bg-red-500 text-white' :
+                                            notif.type === 'warning' ? 'bg-amber-500 text-white' :
+                                            notif.type === 'success' ? 'bg-green-500 text-white' :
+                                            'bg-brand-blue text-white'
+                                        }`}>
+                                            <i className={`fas ${
+                                                notif.type === 'danger' ? 'fa-exclamation-triangle' :
+                                                notif.type === 'warning' ? 'fa-exclamation-circle' :
+                                                notif.type === 'success' ? 'fa-check-circle' :
+                                                'fa-info-circle'
+                                            }`}></i>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-black text-sm uppercase tracking-tight mb-1">{notif.title}</h3>
+                                            <p className="text-sm opacity-80 leading-relaxed font-medium">{notif.content}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-brand-text">Welcome Back, {auth.user.name.split(' ')[0]}!</h1>
                         <p className="text-brand-secondary mt-1">Here is your academic command center.</p>

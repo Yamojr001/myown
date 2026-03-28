@@ -623,8 +623,8 @@ WEAK TOPICS: [{$weakTopicsList}]";
         $schedule = array_fill_keys($days, []);
         
         $totalHours = $weekData['total_study_hours'] ?? $preferences['study_hours'];
-        // Assume 5 main study days for primary distribution
-        $hoursPerDay = floor($totalHours / 5);
+        // Distribute across 7 days potentially
+        $hoursPerDay = floor($totalHours / 7);
         if ($hoursPerDay < 1.5) $hoursPerDay = 1.5; // At least one slot
         
         // Custom schedule constraints
@@ -639,7 +639,7 @@ WEAK TOPICS: [{$weakTopicsList}]";
         $courses = $weekData['courses'] ?? [];
         
         $availableDays = [];
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 7; $i++) {
             if (!isset($unavailableTimes[$days[$i]])) {
                 $availableDays[] = $days[$i];
             }

@@ -1,4 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -26,11 +26,7 @@ export default function Index({ auth, reviews }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={<h2 className="font-semibold text-xl text-white leading-tight">User Feedback & Suggestions</h2>}
-            isAdmin={true}
-        >
+        <AdminLayout>
             <Head title="User Feedback" />
 
             <div className="py-12 bg-gray-900 min-h-screen">
@@ -140,6 +136,6 @@ export default function Index({ auth, reviews }) {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </AdminLayout>
     );
 }
